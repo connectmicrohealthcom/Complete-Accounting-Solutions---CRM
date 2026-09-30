@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
 
 export default function StaffProfile() {
   const [, params] = useRoute("/staff/:id");
@@ -54,7 +55,7 @@ export default function StaffProfile() {
   };
 
   const saveSchedule = async () => {
-    const r = await fetch(`/api/staff/${staffId}/schedule`, {
+    const r = await fetch(`${API_BASE_URL}/api/staff/${staffId}/schedule`, { credentials: "include",
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ hours: scheduleForm }),
