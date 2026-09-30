@@ -111,6 +111,12 @@ router.post("/sales", async (req, res): Promise<void> => {
       if (discount > subtotal) throw new Error("DISCOUNT_EXCEEDS_SUBTOTAL");
       const total = Math.round((subtotal - discount) * 100) / 100;
 
+      if (saleData.paymentMethod === "wallet") {
+        if (saleData.clientId == null) throw new Error("WALLET_CLIENT_REQUIRED");
+        const [client] = await tx.select().from(clientsTable).where(eq(clientsTable.id, saleData.clientId));
+        if (!client || Number(client.walletBalance) < total) throw new Error("INSUFFICIENT_WALLET_BALANCE");
+      }
+
       if (saleData.paymentMethod === "loyalty_points") {
         if (saleData.clientId == null) throw new Error("LOYALTY_CLIENT_REQUIRED");
         if (!Number.isInteger(total)) throw new Error("LOYALTY_TOTAL_MUST_BE_WHOLE_POINTS");
@@ -147,13 +153,15 @@ router.post("/sales", async (req, res): Promise<void> => {
       if (saleData.clientId) {
         const [client] = await tx.select().from(clientsTable).where(eq(clientsTable.id, saleData.clientId));
         if (client) {
-          const earnedPoints = saleData.paymentMethod === "loyalty_points" ? 0 : Math.floor(total);
+          const earnedPoints = ["loyalty_points", "wallet"].includes(saleData.paymentMethod) ? 0 : Math.floor(total);
           const spentPoints = saleData.paymentMethod === "loyalty_points" ? total : 0;
+          const spentWallet = saleData.paymentMethod === "wallet" ? total : 0;
           await tx.update(clientsTable).set({
             totalSpent: String(Number(client.totalSpent) + total),
             visitCount: client.visitCount + 1,
             lastVisit: new Date(),
             loyaltyPoints: client.loyaltyPoints - spentPoints + earnedPoints,
+            walletBalance: String(Number(client.walletBalance) - spentWallet),
           }).where(eq(clientsTable.id, client.id));
         }
       }
@@ -181,6 +189,8 @@ router.post("/sales", async (req, res): Promise<void> => {
       PRODUCT_NOT_AVAILABLE: [400, "Product is not active or does not exist"],
       INSUFFICIENT_STOCK: [409, "Insufficient product stock"],
       DISCOUNT_EXCEEDS_SUBTOTAL: [400, "Discount cannot exceed the subtotal"],
+      WALLET_CLIENT_REQUIRED: [400, "A client is required for wallet payment"],
+      INSUFFICIENT_WALLET_BALANCE: [409, "Insufficient wallet balance"],
       LOYALTY_CLIENT_REQUIRED: [400, "A client is required for loyalty-point payment"],
       LOYALTY_TOTAL_MUST_BE_WHOLE_POINTS: [400, "Loyalty-point payments must use a whole-number total"],
       INSUFFICIENT_LOYALTY_POINTS: [409, "Insufficient loyalty points"],
