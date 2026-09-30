@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, desc } from "drizzle-orm";
+import { z } from "zod";
 import { db, packagesTable, packageServicesTable, servicesTable, clientsTable, clientPackagesTable, clientPackageUsageTable } from "@workspace/db";
 import {
   CreatePackageBody,
