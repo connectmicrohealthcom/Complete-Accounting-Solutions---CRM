@@ -5,6 +5,14 @@ on:
     branches: [main]
 
 jobs:
+  production-reachability:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Render API health
+        run: curl --fail --show-error --silent --max-time 30 https://complete-accounting-solutions-crm.onrender.com/api/healthz
+      - name: Check Vercel frontend
+        run: curl --fail --show-error --silent --max-time 30 -I https://personal-crm-cas.vercel.app
+
   build-and-typecheck:
     runs-on: ubuntu-latest
     services:
