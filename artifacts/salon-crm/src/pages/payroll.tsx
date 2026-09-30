@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "wouter";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { useListStaff, getListStaffQueryKey } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -121,7 +121,24 @@ export default function Payroll() {
   });
 
   const activeStaff = staffList?.filter((s: any) => s.isActive && s.role !== "admin") ?? [];
-  const payrollRows = activeStaff.map((staff: any) => ({ staff, summary: undefined, wageSettings: undefined }));
+  const payrollQueries = useQueries({
+    queries: activeStaff.map((staff: any) => ({
+      queryKey: ["payroll-export", staff.id, from, to],
+      queryFn: async () => {
+        const [summaryRes, wageRes] = await Promise.all([
+          fetch(`${API_BASE_URL}/api/staff/${staff.id}/financial-summary?from=${from}&to=${to}`, { credentials: "include" }),
+          fetch(`${API_BASE_URL}/api/staff/${staff.id}/wage-settings`, { credentials: "include" }),
+        ]);
+        return { summary: await summaryRes.json(), wageSettings: await wageRes.json() };
+      },
+      enabled: !!staffList,
+    })),
+  });
+  const payrollRows = activeStaff.map((staff: any, i: number) => ({
+    staff,
+    summary: payrollQueries[i]?.data?.summary,
+    wageSettings: payrollQueries[i]?.data?.wageSettings,
+  }));
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
