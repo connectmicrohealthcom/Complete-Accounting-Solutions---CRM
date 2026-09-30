@@ -4,17 +4,18 @@ import pg from "pg";
 const { Pool } = pg;
 const baseUrl = process.env.SMOKE_BASE_URL ?? "http://127.0.0.1:5001";
 const email = process.env.SMOKE_EMAIL ?? "stage0-admin@completeaccounting.test";
-const password = process.env.SMOKE_PASSWORD;
+const password = process.env.SMOKE_PASSWORD ?? "";
 if (!password) throw new Error("SMOKE_PASSWORD not set");
 if (!process.env.DATABASE_URL) throw new Error("DATABASE_URL not set");
 
 const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
-async function expectStatus(response: Response, expected: number, label: string) {
-  if (response.status !== expected) {
-    throw new Error(`${label}: expected ${expected}, got ${response.status}: ${await response.text()}`);
+async function expectStatus(response: Response | Promise<Response>, expected: number, label: string) {
+  const actual = await response;
+  if (actual.status !== expected) {
+    throw new Error(`${label}: expected ${expected}, got ${actual.status}: ${await actual.text()}`);
   }
-  return response;
+  return actual;
 }
 
 async function readJson(response: Response) {
