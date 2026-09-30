@@ -8,6 +8,8 @@ import { servicesTable } from "./services";
 export const appointmentStatusEnum = pgEnum("appointment_status", [
   "pending", "confirmed", "in_progress", "completed", "cancelled", "no_show"
 ]);
+export const bookingSourceEnum = pgEnum("booking_source", ["staff", "online"]);
+export const appointmentPaymentStatusEnum = pgEnum("appointment_payment_status", ["unpaid", "pending", "paid", "failed"]);
 
 export const appointmentsTable = pgTable("appointments", {
   id: serial("id").primaryKey(),
@@ -20,6 +22,11 @@ export const appointmentsTable = pgTable("appointments", {
   status: appointmentStatusEnum("status").notNull().default("pending"),
   totalPrice: numeric("total_price", { precision: 10, scale: 2 }).notNull(),
   notes: text("notes"),
+  bookingSource: bookingSourceEnum("booking_source").notNull().default("staff"),
+  paymentStatus: appointmentPaymentStatusEnum("payment_status").notNull().default("unpaid"),
+  paymentProvider: text("payment_provider"),
+  paymentReference: text("payment_reference"),
+  publicToken: text("public_token").unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
