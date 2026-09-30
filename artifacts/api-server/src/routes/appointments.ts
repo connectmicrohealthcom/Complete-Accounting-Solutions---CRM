@@ -45,7 +45,7 @@ function formatTime(totalMinutes: number): string {
 
 const ACTIVE_BOOKING_STATUSES = ["pending", "confirmed", "in_progress"] as const;
 
-async function validateBooking(input: {
+export async function validateBooking(input: {
   clientId?: number;
   staffId: number;
   serviceId: number;
