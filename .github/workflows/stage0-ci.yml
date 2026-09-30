@@ -1,8 +1,11 @@
-name: Stage 0 CI Validation
+name: Salon Core CI Validation
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
   production-reachability:
@@ -69,6 +72,15 @@ jobs:
           SESSION_SECRET: stage0-ci-session
           PORT: 5001
         run: pnpm --filter @workspace/scripts stage0-smoke
+      - name: Stage 1 salon core smoke test
+        env:
+          SMOKE_BASE_URL: http://127.0.0.1:5001
+          SMOKE_EMAIL: stage1-admin@completeaccounting.test
+          SMOKE_PASSWORD: stage1-ci-password
+          NODE_ENV: test
+          SESSION_SECRET: stage1-ci-session
+          PORT: 5001
+        run: pnpm --filter @workspace/scripts stage1-smoke
       - name: Stop API
         if: always()
         run: if [ -f /tmp/cas-api.pid ]; then kill $(cat /tmp/cas-api.pid) || true; fi
