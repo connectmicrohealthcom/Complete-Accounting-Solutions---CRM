@@ -42,7 +42,10 @@ router.post("/packages", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const { services, ...pkgData } = parsed.data;
-  const [pkg] = await db.insert(packagesTable).values(pkgData).returning();
+  const [pkg] = await db.insert(packagesTable).values({
+    ...pkgData,
+    price: String(pkgData.price),
+  }).returning();
 
   if (services?.length) {
     await db.insert(packageServicesTable).values(services.map((s) => ({ packageId: pkg.id, serviceId: s.serviceId, quantity: s.quantity })));
@@ -58,7 +61,11 @@ router.patch("/packages/:id", async (req, res): Promise<void> => {
   const parsed = UpdatePackageBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [pkg] = await db.update(packagesTable).set(parsed.data).where(eq(packagesTable.id, params.data.id)).returning();
+  const { price, ...rest } = parsed.data;
+  const [pkg] = await db.update(packagesTable).set({
+    ...rest,
+    ...(price !== undefined ? { price: String(price) } : {}),
+  }).where(eq(packagesTable.id, params.data.id)).returning();
   if (!pkg) { res.status(404).json({ error: "Not found" }); return; }
   res.json(await buildPackageResponse(pkg));
 });
