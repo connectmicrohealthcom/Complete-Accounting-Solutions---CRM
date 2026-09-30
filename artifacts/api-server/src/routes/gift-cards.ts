@@ -245,6 +245,24 @@ router.post("/clients/:id/wallet/redeem", async (req, res): Promise<void> => {
     return;
   }
 
+  if (parsed.data.referenceType === "gift_card") {
+    if (!parsed.data.referenceId) { res.status(400).json({ error: "Gift card referenceId is required" }); return; }
+    const [card] = await db.select().from(giftCardsTable).where(eq(giftCardsTable.id, parsed.data.referenceId));
+    if (!card || card.clientId !== clientId) { res.status(404).json({ error: "Gift card not found for client" }); return; }
+    const today = new Date().toISOString().split("T")[0];
+    if (card.status !== "active" || (card.expiryDate != null && card.expiryDate < today)) {
+      res.status(409).json({ error: "Gift card is not active" });
+      return;
+    }
+    if (Number(card.remainingBalance) < parsed.data.amount) {
+      res.status(400).json({ error: "Insufficient gift card balance" });
+      return;
+    }
+    await db.update(giftCardsTable)
+      .set({ remainingBalance: String(Number(card.remainingBalance) - parsed.data.amount) })
+      .where(eq(giftCardsTable.id, card.id));
+  }
+
   const newBalance = currentBalance - parsed.data.amount;
   await db.update(clientsTable).set({ walletBalance: String(newBalance) }).where(eq(clientsTable.id, clientId));
 
