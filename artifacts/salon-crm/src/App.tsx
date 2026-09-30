@@ -27,6 +27,7 @@ import Settings from "@/pages/settings";
 import FinancePaymentSummary from "@/pages/finance-payment-summary";
 import FinanceExpenses from "@/pages/finance-expenses";
 import FinanceReports from "@/pages/finance-reports";
+import PublicBooking from "@/pages/public-booking";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,6 +42,7 @@ function AppRouter() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
+      <Route path="/book" component={PublicBooking} />
 
       <Route path="/dashboard">
         <ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>
