@@ -44,7 +44,10 @@ router.post("/services", async (req, res): Promise<void> => {
   const parsed = CreateServiceBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [service] = await db.insert(servicesTable).values(parsed.data).returning();
+  const [service] = await db.insert(servicesTable).values({
+    ...parsed.data,
+    price: String(parsed.data.price),
+  }).returning();
   res.status(201).json({ ...service, price: Number(service.price), createdAt: service.createdAt.toISOString(), categoryName: null });
 });
 
@@ -55,7 +58,11 @@ router.patch("/services/:id", async (req, res): Promise<void> => {
   const parsed = UpdateServiceBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [service] = await db.update(servicesTable).set(parsed.data).where(eq(servicesTable.id, params.data.id)).returning();
+  const { price, ...rest } = parsed.data;
+  const [service] = await db.update(servicesTable).set({
+    ...rest,
+    ...(price !== undefined ? { price: String(price) } : {}),
+  }).where(eq(servicesTable.id, params.data.id)).returning();
   if (!service) { res.status(404).json({ error: "Not found" }); return; }
   res.json({ ...service, price: Number(service.price), createdAt: service.createdAt.toISOString(), categoryName: null });
 });
