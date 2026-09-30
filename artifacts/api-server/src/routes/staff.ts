@@ -13,6 +13,14 @@ import { sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+function parseTime(value: string): number | null {
+  const match = /^(\\d{2}):(\\d{2})$/.exec(value);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  return hour <= 23 && minute <= 59 ? hour * 60 + minute : null;
+}
+
 function formatStaff(s: typeof staffTable.$inferSelect) {
   const { passwordHash: _ph, ...safe } = s;
   return {
@@ -89,8 +97,31 @@ router.put("/staff/:id/schedule", async (req, res): Promise<void> => {
   if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }
   const parsed = UpdateStaffScheduleBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
+
+  const hours = parsed.data.hours;
+  const days = hours.map(h => h.dayOfWeek);
+  if (hours.length !== 7 || new Set(days).size !== 7 || days.some(d => d < 0 || d > 6)) {
+    res.status(400).json({ error: "A complete schedule must contain exactly one entry for each day 0-6" });
+    return;
+  }
+  for (const h of hours) {
+    const start = parseTime(h.startTime);
+    const end = parseTime(h.endTime);
+    if (start == null || end == null) {
+      res.status(400).json({ error: "Schedule times must use HH:MM" });
+      return;
+    }
+    if (h.isWorking && start >= end) {
+      res.status(400).json({ error: `Invalid working hours for day ${h.dayOfWeek}` });
+      return;
+    }
+  }
+
+  const [staff] = await db.select({ id: staffTable.id }).from(staffTable).where(eq(staffTable.id, params.data.id));
+  if (!staff) { res.status(404).json({ error: "Staff member not found" }); return; }
+
   await db.delete(workingHoursTable).where(eq(workingHoursTable.staffId, params.data.id));
-  const rows = parsed.data.hours.map((h) => ({ ...h, staffId: params.data.id }));
+  const rows = hours.map((h) => ({ ...h, staffId: params.data.id }));
   const result = await db.insert(workingHoursTable).values(rows).returning();
   res.json(result);
 });
@@ -293,9 +324,12 @@ router.get("/staff/:id/financial-summary", async (req, res): Promise<void> => {
       : totalHours * Number(wageSettings.baseAmount);
   }
 
-  const payments = await db.select().from(wagePaymentsTable).where(eq(wagePaymentsTable.staffId, staffId));
+  const paymentConditions: any[] = [eq(wagePaymentsTable.staffId, staffId)];
+  if (from) paymentConditions.push(gte(wagePaymentsTable.paymentDate, from));
+  if (to) paymentConditions.push(lte(wagePaymentsTable.paymentDate, to));
+  const payments = await db.select().from(wagePaymentsTable).where(and(...paymentConditions));
   const wagesPaid = payments.reduce((s, p) => s + Number(p.amount), 0);
-  const outstandingWages = Math.max(0, wagesDue - wagesPaid);
+  const outstandingWages = Math.max(0, wagesDue + commissionEarned - wagesPaid);
 
   const slabs = await db.select().from(commissionSlabsTable)
     .where(eq(commissionSlabsTable.staffId, staffId))
@@ -336,6 +370,10 @@ router.get("/staff/:id/financial-summary", async (req, res): Promise<void> => {
     outstandingWages: Math.round(outstandingWages * 100) / 100,
     totalHours: Math.round(totalHours * 100) / 100,
     daysWorked,
+    totalRevenue: Math.round(totalSales * 100) / 100,
+    wagePaid: Math.round(wagesPaid * 100) / 100,
+    netPayable: Math.round(outstandingWages * 100) / 100,
+    totalHoursLogged: Math.round(totalHours * 100) / 100,
   });
 });
 
