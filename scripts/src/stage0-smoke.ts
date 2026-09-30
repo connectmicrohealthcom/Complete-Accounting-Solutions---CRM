@@ -1,3 +1,4 @@
+import bcrypt from "bcryptjs";
 import pg from "pg";
 
 const { Pool } = pg;
@@ -21,6 +22,15 @@ async function readJson(response: Response) {
 }
 
 async function main() {
+  const passwordHash = await bcrypt.hash(password, 10);
+  await pool.query(
+    `INSERT INTO staff (name, email, password_hash, role, is_active)
+     VALUES ('Stage 0 Admin', $1, $2, 'admin', true)
+     ON CONFLICT (email) DO UPDATE
+       SET password_hash = EXCLUDED.password_hash, role = 'admin', is_active = true`,
+    [email, passwordHash],
+  );
+
   await expectStatus(fetch(`${baseUrl}/api/healthz`), 200, "health");
   await expectStatus(fetch(`${baseUrl}/api/clients`), 401, "unauthenticated API access");
 
