@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, and, gte, lte, desc, or, ilike, inArray } from "drizzle-orm";
+import { eq, and, gte, lte, desc, or, ilike, inArray, ne } from "drizzle-orm";
 import {
   db,
   appointmentsTable,
@@ -27,6 +27,80 @@ const SummaryQueryParams = z.object({
   from: z.string(),
   to: z.string(),
 });
+
+function parseTime(value: string): number | null {
+  const match = /^(\\d{2}):(\\d{2})$/.exec(value);
+  if (!match) return null;
+  const hour = Number(match[1]);
+  const minute = Number(match[2]);
+  if (hour > 23 || minute > 59) return null;
+  return hour * 60 + minute;
+}
+
+function formatTime(totalMinutes: number): string {
+  const normalized = totalMinutes % (24 * 60);
+  return `${String(Math.floor(normalized / 60)).padStart(2, "0")}:${String(normalized % 60).padStart(2, "0")}`;
+}
+
+const ACTIVE_BOOKING_STATUSES = ["pending", "confirmed", "in_progress"] as const;
+
+async function validateBooking(input: {
+  clientId: number;
+  staffId: number;
+  serviceId: number;
+  date: string;
+  startTime: string;
+  excludeAppointmentId?: number;
+}) {
+  const startMinutes = parseTime(input.startTime);
+  if (startMinutes == null) return { ok: false as const, status: 400, error: "Invalid startTime. Use HH:MM." };
+
+  const [client, staff, service] = await Promise.all([
+    db.select().from(clientsTable).where(eq(clientsTable.id, input.clientId)),
+    db.select().from(staffTable).where(eq(staffTable.id, input.staffId)),
+    db.select().from(servicesTable).where(eq(servicesTable.id, input.serviceId)),
+  ]);
+  if (!client[0]) return { ok: false as const, status: 404, error: "Client not found" };
+  if (!staff[0] || !staff[0].isActive) return { ok: false as const, status: 400, error: "Staff member is not active" };
+  if (!service[0] || !service[0].isActive) return { ok: false as const, status: 400, error: "Service is not active" };
+
+  const endMinutes = startMinutes + service[0].duration;
+  if (endMinutes > 24 * 60) return { ok: false as const, status: 400, error: "Appointment cannot extend past midnight" };
+
+  const dayOfWeek = new Date(`${input.date}T12:00:00`).getDay();
+  const [schedule] = await db.select().from(workingHoursTable)
+    .where(and(eq(workingHoursTable.staffId, input.staffId), eq(workingHoursTable.dayOfWeek, dayOfWeek)));
+  if (!schedule || !schedule.isWorking) {
+    return { ok: false as const, status: 409, error: "Staff member is not available on the selected day" };
+  }
+
+  const scheduleStart = parseTime(schedule.startTime);
+  const scheduleEnd = parseTime(schedule.endTime);
+  if (scheduleStart == null || scheduleEnd == null || startMinutes < scheduleStart || endMinutes > scheduleEnd) {
+    return { ok: false as const, status: 409, error: "Appointment falls outside the staff member's booking hours" };
+  }
+
+  const existing = await db.select().from(appointmentsTable).where(
+    and(
+      eq(appointmentsTable.staffId, input.staffId),
+      eq(appointmentsTable.date, input.date),
+      inArray(appointmentsTable.status, [...ACTIVE_BOOKING_STATUSES]),
+      input.excludeAppointmentId != null ? ne(appointmentsTable.id, input.excludeAppointmentId) : undefined,
+    )
+  );
+  const overlaps = existing.some((appt) => {
+    const existingStart = parseTime(appt.startTime);
+    const existingEnd = parseTime(appt.endTime);
+    return existingStart != null && existingEnd != null && startMinutes < existingEnd && endMinutes > existingStart;
+  });
+  if (overlaps) return { ok: false as const, status: 409, error: "Staff member already has an appointment in this time slot" };
+
+  return {
+    ok: true as const,
+    endTime: formatTime(endMinutes),
+    totalPrice: Number(service[0].price),
+  };
+}
 
 const EnhancedListParams = z.object({
   date: z.string().optional(),
@@ -285,21 +359,43 @@ router.get("/appointments", async (req, res): Promise<void> => {
   res.json(result);
 });
 
+router.get("/staff/:id/availability", async (req, res): Promise<void> => {
+  const staffId = Number(req.params.id);
+  const { date, startTime, serviceId, excludeAppointmentId } = req.query as Record<string, string | undefined>;
+  if (!Number.isInteger(staffId) || !date || !startTime || !serviceId) {
+    res.status(400).json({ error: "date, startTime and serviceId are required" });
+    return;
+  }
+  const result = await validateBooking({
+    clientId: Number((req.query as any).clientId ?? 0),
+    staffId,
+    serviceId: Number(serviceId),
+    date,
+    startTime,
+    excludeAppointmentId: excludeAppointmentId ? Number(excludeAppointmentId) : undefined,
+  });
+  if (!result.ok && result.error === "Client not found") {
+    // Availability checks do not require a real client.
+    const fakeClientResult = await db.select().from(staffTable).where(eq(staffTable.id, staffId));
+    if (!fakeClientResult[0]) { res.status(404).json({ error: "Staff member not found" }); return; }
+  }
+  if (!result.ok && result.error !== "Client not found") {
+    res.status(result.status).json({ available: false, error: result.error });
+    return;
+  }
+  res.json({ available: true, endTime: result.endTime, totalPrice: result.totalPrice });
+});
+
 router.post("/appointments", async (req, res): Promise<void> => {
   const parsed = CreateAppointmentBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [service] = await db.select().from(servicesTable).where(eq(servicesTable.id, parsed.data.serviceId));
-  if (!service) { res.status(404).json({ error: "Service not found" }); return; }
-
-  const startParts = parsed.data.startTime.split(":").map(Number);
-  const startMinutes = startParts[0] * 60 + startParts[1];
-  const endMinutes = startMinutes + service.duration;
-  const endTime = `${String(Math.floor(endMinutes / 60)).padStart(2, "0")}:${String(endMinutes % 60).padStart(2, "0")}`;
+  const validation = await validateBooking(parsed.data);
+  if (!validation.ok) { res.status(validation.status).json({ error: validation.error }); return; }
 
   const [appt] = await db
     .insert(appointmentsTable)
-    .values({ ...parsed.data, endTime, totalPrice: String(service.price) })
+    .values({ ...parsed.data, endTime: validation.endTime, totalPrice: String(validation.totalPrice) })
     .returning();
 
   const result = await buildAppointmentResponse(appt);
@@ -322,28 +418,62 @@ router.patch("/appointments/:id", async (req, res): Promise<void> => {
   const parsed = UpdateAppointmentBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [appt] = await db.update(appointmentsTable).set(parsed.data).where(eq(appointmentsTable.id, params.data.id)).returning();
-  if (!appt) { res.status(404).json({ error: "Not found" }); return; }
+  const [current] = await db.select().from(appointmentsTable).where(eq(appointmentsTable.id, params.data.id));
+  if (!current) { res.status(404).json({ error: "Not found" }); return; }
+  if (!["pending", "confirmed"].includes(current.status)) {
+    res.status(409).json({ error: "Only pending or confirmed appointments can be rescheduled or edited" });
+    return;
+  }
+
+  const booking = await validateBooking({
+    clientId: parsed.data.clientId ?? current.clientId,
+    staffId: parsed.data.staffId ?? current.staffId,
+    serviceId: parsed.data.serviceId ?? current.serviceId,
+    date: parsed.data.date ?? current.date,
+    startTime: parsed.data.startTime ?? current.startTime,
+    excludeAppointmentId: current.id,
+  });
+  if (!booking.ok) { res.status(booking.status).json({ error: booking.error }); return; }
+
+  const [appt] = await db.update(appointmentsTable).set({
+    ...parsed.data,
+    endTime: booking.endTime,
+    totalPrice: String(booking.totalPrice),
+  }).where(eq(appointmentsTable.id, params.data.id)).returning();
   res.json(await buildAppointmentResponse(appt));
 });
 
 router.delete("/appointments/:id", async (req, res): Promise<void> => {
   const params = DeleteAppointmentParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }
-
-  await db.delete(appointmentsTable).where(eq(appointmentsTable.id, params.data.id));
-  res.sendStatus(204);
-});
-
-router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
+  const [current] = await db.select().from(appointmentsTable).where(eq(appointmentsTable.id, params.data.id));
+  ifrouter.patch("/appointments/:id/status", async (req, res): Promise<void> => {
   const params = UpdateAppointmentStatusParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }
 
   const parsed = UpdateAppointmentStatusBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [appt] = await db.update(appointmentsTable).set({ status: parsed.data.status }).where(eq(appointmentsTable.id, params.data.id)).returning();
-  if (!appt) { res.status(404).json({ error: "Not found" }); return; }
+  const [current] = await db.select().from(appointmentsTable).where(eq(appointmentsTable.id, params.data.id));
+  if (!current) { res.status(404).json({ error: "Not found" }); return; }
+
+  const allowed: Record<string, string[]> = {
+    pending: ["confirmed", "cancelled"],
+    confirmed: ["in_progress", "cancelled", "no_show"],
+    in_progress: ["completed", "cancelled"],
+    completed: [],
+    cancelled: [],
+    no_show: [],
+  };
+  if (!allowed[current.status]?.includes(parsed.data.status)) {
+    res.status(409).json({ error: `Invalid appointment status transition: ${current.status} -> ${parsed.data.status}` });
+    return;
+  }
+
+  const [appt] = await db.update(appointmentsTable)
+    .set({ status: parsed.data.status })
+    .where(eq(appointmentsTable.id, params.data.id))
+    .returning();
   res.json(await buildAppointmentResponse(appt));
 });
 
