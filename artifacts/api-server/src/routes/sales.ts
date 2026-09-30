@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
 import { db, salesTable, saleItemsTable, staffTable, clientsTable, clientsTable as ct, servicesTable, productsTable, appointmentsTable } from "@workspace/db";
+import { postSaleTx } from "../services/accounting";
 import {
   CreateSaleBody,
   GetSaleParams,
@@ -165,6 +166,8 @@ router.post("/sales", async (req, res): Promise<void> => {
           }).where(eq(clientsTable.id, client.id));
         }
       }
+
+      await postSaleTx(tx, sale.id, (req as any).session?.staffId);
 
       if (saleData.appointmentId != null) {
         await tx.update(appointmentsTable)
