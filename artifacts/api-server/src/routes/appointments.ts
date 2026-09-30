@@ -45,7 +45,7 @@ function formatTime(totalMinutes: number): string {
 const ACTIVE_BOOKING_STATUSES = ["pending", "confirmed", "in_progress"] as const;
 
 async function validateBooking(input: {
-  clientId: number;
+  clientId?: number;
   staffId: number;
   serviceId: number;
   date: string;
@@ -56,11 +56,11 @@ async function validateBooking(input: {
   if (startMinutes == null) return { ok: false as const, status: 400, error: "Invalid startTime. Use HH:MM." };
 
   const [client, staff, service] = await Promise.all([
-    db.select().from(clientsTable).where(eq(clientsTable.id, input.clientId)),
+    input.clientId != null ? db.select().from(clientsTable).where(eq(clientsTable.id, input.clientId)) : Promise.resolve([]),
     db.select().from(staffTable).where(eq(staffTable.id, input.staffId)),
     db.select().from(servicesTable).where(eq(servicesTable.id, input.serviceId)),
   ]);
-  if (!client[0]) return { ok: false as const, status: 404, error: "Client not found" };
+  if (input.clientId != null && !client[0]) return { ok: false as const, status: 404, error: "Client not found" };
   if (!staff[0] || !staff[0].isActive) return { ok: false as const, status: 400, error: "Staff member is not active" };
   if (!service[0] || !service[0].isActive) return { ok: false as const, status: 400, error: "Service is not active" };
 
@@ -367,19 +367,13 @@ router.get("/staff/:id/availability", async (req, res): Promise<void> => {
     return;
   }
   const result = await validateBooking({
-    clientId: Number((req.query as any).clientId ?? 0),
     staffId,
     serviceId: Number(serviceId),
     date,
     startTime,
     excludeAppointmentId: excludeAppointmentId ? Number(excludeAppointmentId) : undefined,
   });
-  if (!result.ok && result.error === "Client not found") {
-    // Availability checks do not require a real client.
-    const fakeClientResult = await db.select().from(staffTable).where(eq(staffTable.id, staffId));
-    if (!fakeClientResult[0]) { res.status(404).json({ error: "Staff member not found" }); return; }
-  }
-  if (!result.ok && result.error !== "Client not found") {
+  if (!result.ok) {
     res.status(result.status).json({ available: false, error: result.error });
     return;
   }
