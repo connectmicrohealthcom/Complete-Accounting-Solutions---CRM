@@ -441,7 +441,16 @@ router.delete("/appointments/:id", async (req, res): Promise<void> => {
   const params = DeleteAppointmentParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }
   const [current] = await db.select().from(appointmentsTable).where(eq(appointmentsTable.id, params.data.id));
-  ifrouter.patch("/appointments/:id/status", async (req, res): Promise<void> => {
+  if (!current) { res.sendStatus(204); return; }
+  if (["completed", "cancelled", "no_show"].includes(current.status)) {
+    res.status(409).json({ error: "Appointment is already closed" });
+    return;
+  }
+  await db.update(appointmentsTable).set({ status: "cancelled" }).where(eq(appointmentsTable.id, params.data.id));
+  res.sendStatus(204);
+});
+
+router.patch("/appointments/:id/status", async (req, res): Promise<void> => {
   const params = UpdateAppointmentStatusParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }
 
