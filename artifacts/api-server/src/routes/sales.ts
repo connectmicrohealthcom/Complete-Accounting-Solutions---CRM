@@ -146,11 +146,12 @@ router.post("/sales", async (req, res): Promise<void> => {
         const [client] = await tx.select().from(clientsTable).where(eq(clientsTable.id, saleData.clientId));
         if (client) {
           const earnedPoints = saleData.paymentMethod === "loyalty_points" ? 0 : Math.floor(total);
+          const spentPoints = saleData.paymentMethod === "loyalty_points" ? total : 0;
           await tx.update(clientsTable).set({
             totalSpent: String(Number(client.totalSpent) + total),
             visitCount: client.visitCount + 1,
             lastVisit: new Date(),
-            loyaltyPoints: client.loyaltyPoints + earnedPoints,
+            loyaltyPoints: client.loyaltyPoints - spentPoints + earnedPoints,
           }).where(eq(clientsTable.id, client.id));
         }
       }
