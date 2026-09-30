@@ -16,6 +16,7 @@ import dashboardRouter from "./dashboard";
 import tipsRouter from "./tips";
 import financeRouter from "./finance";
 import expensesRouter from "./expenses";
+import accountingRouter from "./accounting";
 import { requireAuth, requireRole } from "../middleware/auth";
 
 const router: IRouter = Router();
@@ -40,5 +41,6 @@ router.use(tipsRouter);
 router.use(requireRole("admin", "manager"));
 router.use(financeRouter);
 router.use(expensesRouter);
+router.use(accountingRouter);
 
 export default router;
