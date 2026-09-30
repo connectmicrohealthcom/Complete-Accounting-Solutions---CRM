@@ -6,6 +6,7 @@ import {
   staffTable,
   clientsTable,
   servicesTable,
+  workingHoursTable,
   serviceCategoriesTable,
   salesTable,
 } from "@workspace/db";
