@@ -10,6 +10,7 @@
     "stage0-smoke": "tsx ./src/stage0-smoke.ts",
     "stage1-smoke": "tsx ./src/stage1-smoke.ts",
     "stage2-smoke": "tsx ./src/stage2-smoke.ts",
+    "stage3-smoke": "tsx ./src/stage3-smoke.ts",
     "automation:run": "tsx ./src/stage2-automation.ts"
   },
   "dependencies": {
