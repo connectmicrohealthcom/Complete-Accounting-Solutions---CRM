@@ -126,6 +126,7 @@ router.post("/client-memberships", async (req, res): Promise<void> => {
 
   const [plan] = await db.select().from(membershipPlansTable).where(eq(membershipPlansTable.id, planId));
   if (!plan) { res.status(404).json({ error: "Plan not found" }); return; }
+  if (!plan.isActive) { res.status(409).json({ error: "Membership plan is inactive" }); return; }
 
   const start = new Date(startDate);
   const expiry = new Date(start);
@@ -225,13 +226,30 @@ router.post("/client-memberships/:id/use", async (req, res): Promise<void> => {
   const [membership] = await db.select().from(clientMembershipsTable).where(eq(clientMembershipsTable.id, membershipId));
   if (!membership) { res.status(404).json({ error: "Membership not found" }); return; }
 
+  const today = new Date().toISOString().split("T")[0];
+  if (membership.status !== "active" || membership.expiryDate < today) {
+    res.status(409).json({ error: "Membership is expired or inactive" });
+    return;
+  }
+
+  const [included] = await db.select().from(membershipPlanServicesTable)
+    .where(and(eq(membershipPlanServicesTable.planId, membership.planId), eq(membershipPlanServicesTable.serviceId, parsed.data.serviceId)));
+  if (!included) { res.status(400).json({ error: "Service is not included in this membership" }); return; }
+
+  const used = await db.select().from(clientMembershipUsageTable)
+    .where(and(eq(clientMembershipUsageTable.clientMembershipId, membershipId), eq(clientMembershipUsageTable.serviceId, parsed.data.serviceId)));
+  if (used.length >= included.quantity) {
+    res.status(409).json({ error: "No remaining uses for this service" });
+    return;
+  }
+
   await db.insert(clientMembershipUsageTable).values({
     clientMembershipId: membershipId,
     serviceId: parsed.data.serviceId,
     notes: parsed.data.notes,
   });
 
-  res.json({ success: true });
+  res.json({ success: true, remaining: included.quantity - used.length - 1 });
 });
 
 router.get("/memberships/sales", async (_req, res): Promise<void> => {
