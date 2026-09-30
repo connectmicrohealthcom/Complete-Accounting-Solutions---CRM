@@ -329,8 +329,6 @@ router.get("/staff/:id/financial-summary", async (req, res): Promise<void> => {
   if (to) paymentConditions.push(lte(wagePaymentsTable.paymentDate, to));
   const payments = await db.select().from(wagePaymentsTable).where(and(...paymentConditions));
   const wagesPaid = payments.reduce((s, p) => s + Number(p.amount), 0);
-  const outstandingWages = Math.max(0, wagesDue + commissionEarned - wagesPaid);
-
   const slabs = await db.select().from(commissionSlabsTable)
     .where(eq(commissionSlabsTable.staffId, staffId))
     .orderBy(commissionSlabsTable.sortOrder);
@@ -358,6 +356,8 @@ router.get("/staff/:id/financial-summary", async (req, res): Promise<void> => {
   } else if (staff.commissionRate) {
     commissionEarned = (totalSales * Number(staff.commissionRate)) / 100;
   }
+
+  const outstandingWages = Math.max(0, wagesDue + commissionEarned - wagesPaid);
 
   res.json({
     staffId,
