@@ -386,7 +386,7 @@ export const GetClientHistoryResponse = zod.object({
   "subtotal": zod.number(),
   "discount": zod.number(),
   "total": zod.number(),
-  "paymentMethod": zod.enum(['cash', 'card', 'bank_transfer', 'loyalty_points']),
+  "paymentMethod": zod.enum(['cash', 'card', 'bank_transfer', 'loyalty_points', 'wallet']),
   "notes": zod.string().nullish(),
   "createdAt": zod.string()
 }))
@@ -748,7 +748,7 @@ export const ListSalesResponse = zod.object({
   "subtotal": zod.number(),
   "discount": zod.number(),
   "total": zod.number(),
-  "paymentMethod": zod.enum(['cash', 'card', 'bank_transfer', 'loyalty_points']),
+  "paymentMethod": zod.enum(['cash', 'card', 'bank_transfer', 'loyalty_points', 'wallet']),
   "notes": zod.string().nullish(),
   "createdAt": zod.string()
 })),
@@ -773,7 +773,7 @@ export const CreateSaleBody = zod.object({
   "unitPrice": zod.number()
 })),
   "discount": zod.number().optional(),
-  "paymentMethod": zod.enum(['cash', 'card', 'bank_transfer', 'loyalty_points']),
+  "paymentMethod": zod.enum(['cash', 'card', 'bank_transfer', 'loyalty_points', 'wallet']),
   "notes": zod.string().optional()
 })
 
@@ -804,7 +804,7 @@ export const GetSaleResponse = zod.object({
   "subtotal": zod.number(),
   "discount": zod.number(),
   "total": zod.number(),
-  "paymentMethod": zod.enum(['cash', 'card', 'bank_transfer', 'loyalty_points']),
+  "paymentMethod": zod.enum(['cash', 'card', 'bank_transfer', 'loyalty_points', 'wallet']),
   "notes": zod.string().nullish(),
   "createdAt": zod.string()
 })
