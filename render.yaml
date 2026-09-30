@@ -1,0 +1,28 @@
+services:
+  - type: cron
+    name: complete-accounting-solutions-automation
+    runtime: node
+    region: singapore
+    schedule: "*/15 * * * *"
+    buildCommand: "pnpm install --frozen-lockfile && pnpm --filter @workspace/db push"
+    startCommand: "pnpm --filter @workspace/scripts automation:run"
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: NOTIFICATION_MODE
+        value: whatsapp
+      - key: BUSINESS_TIMEZONE_OFFSET_MINUTES
+        value: "240"
+      - key: WHATSAPP_GRAPH_VERSION
+        sync: false
+      - key: WHATSAPP_ACCESS_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_APPOINTMENT_REMINDER_TEMPLATE
+        sync: false
+      - key: WHATSAPP_BIRTHDAY_TEMPLATE
+        sync: false
+      - key: WHATSAPP_TEMPLATE_LANGUAGE
+        value: en_US
