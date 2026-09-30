@@ -1,5 +1,5 @@
 import { Router, type IRouter } from "express";
-import { eq, lte, ilike } from "drizzle-orm";
+import { eq, ilike } from "drizzle-orm";
 import { db, productsTable } from "@workspace/db";
 import {
   CreateProductBody,
@@ -46,7 +46,11 @@ router.post("/products", async (req, res): Promise<void> => {
   const parsed = CreateProductBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [product] = await db.insert(productsTable).values(parsed.data).returning();
+  const [product] = await db.insert(productsTable).values({
+    ...parsed.data,
+    costPrice: parsed.data.costPrice == null ? null : String(parsed.data.costPrice),
+    price: String(parsed.data.price),
+  }).returning();
   res.status(201).json(formatProduct(product));
 });
 
@@ -57,7 +61,12 @@ router.patch("/products/:id", async (req, res): Promise<void> => {
   const parsed = UpdateProductBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
-  const [product] = await db.update(productsTable).set(parsed.data).where(eq(productsTable.id, params.data.id)).returning();
+  const { costPrice, price, ...rest } = parsed.data;
+  const [product] = await db.update(productsTable).set({
+    ...rest,
+    ...(costPrice !== undefined ? { costPrice: costPrice == null ? null : String(costPrice) } : {}),
+    ...(price !== undefined ? { price: String(price) } : {}),
+  }).where(eq(productsTable.id, params.data.id)).returning();
   if (!product) { res.status(404).json({ error: "Not found" }); return; }
   res.json(formatProduct(product));
 });
