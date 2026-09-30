@@ -156,7 +156,8 @@ router.post("/accounting/periods/:id/close",async(req,res)=>{
   const result=await db.transaction(async tx=>{
     const [period]=await tx.select().from(accountingPeriodsTable).where(eq(accountingPeriodsTable.id,id));
     if(!period||period.status==="closed") throw new Error("PERIOD_ALREADY_CLOSED");
-    const [unbalanced]=await tx.execute(sql`SELECT je.id FROM journal_entries je JOIN journal_lines jl ON jl.journal_entry_id=je.id WHERE je.entry_date BETWEEN ${period.startDate} AND ${period.endDate} AND je.status='posted' GROUP BY je.id HAVING ABS(SUM(jl.debit)-SUM(jl.credit)) > 0.005 LIMIT 1`);
+    const unbalancedResult=await tx.execute(sql`SELECT je.id FROM journal_entries je JOIN journal_lines jl ON jl.journal_entry_id=je.id WHERE je.entry_date BETWEEN ${period.startDate} AND ${period.endDate} AND je.status='posted' GROUP BY je.id HAVING ABS(SUM(jl.debit)-SUM(jl.credit)) > 0.005 LIMIT 1`);
+    const unbalanced=(unbalancedResult.rows as any[])[0];
     if(unbalanced) throw new Error("UNBALANCED_ENTRY");
     const [closed]=await tx.update(accountingPeriodsTable).set({status:"closed",closedAt:new Date(),closedBy:(req as any).session?.staffId??null}).where(eq(accountingPeriodsTable.id,id)).returning();
     await audit(tx,"close","accounting_period",id,period,closed,(req as any).session?.staffId);
