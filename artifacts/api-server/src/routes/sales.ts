@@ -46,6 +46,8 @@ router.get("/sales", async (req, res): Promise<void> => {
   if (staffId) conditions.push(eq(salesTable.staffId, staffId));
   if (clientId) conditions.push(eq(salesTable.clientId, clientId));
   if (paymentMethod) conditions.push(eq(salesTable.paymentMethod, paymentMethod as any));
+  if (from) conditions.push(gte(salesTable.createdAt, new Date(from)));
+  if (to) { const toDate = new Date(to); toDate.setHours(23, 59, 59, 999); conditions.push(lte(salesTable.createdAt, toDate)); }
 
   if (conditions.length > 0) {
     q = q.where(and(...conditions)) as any;
@@ -194,7 +196,10 @@ router.get("/sales/summary", async (req, res): Promise<void> => {
   const query = GetSalesSummaryQueryParams.safeParse(req.query);
   if (!query.success) { res.status(400).json({ error: query.error.message }); return; }
 
-  const sales = await db.select().from(salesTable);
+  const conditions: any[] = [];
+  if (query.data.from) conditions.push(gte(salesTable.createdAt, new Date(query.data.from)));
+  if (query.data.to) { const toDate = new Date(query.data.to); toDate.setHours(23, 59, 59, 999); conditions.push(lte(salesTable.createdAt, toDate)); }
+  const sales = await db.select().from(salesTable).where(conditions.length ? and(...conditions) : undefined);
 
   const totalRevenue = sales.reduce((s, x) => s + Number(x.total), 0);
   const totalTransactions = sales.length;
