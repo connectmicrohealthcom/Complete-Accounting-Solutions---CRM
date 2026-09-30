@@ -21,6 +21,8 @@ import { Plus, Receipt, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+
 type SaleItem = {
   type: "service" | "product";
   referenceId?: number;
@@ -129,7 +131,7 @@ export default function Sales() {
     }, {
       onSuccess: async (sale: any) => {
         if (tipAmount > 0 && data.tipStaffId) {
-          await fetch("/api/tips", {
+          await fetch(`${API_BASE_URL}/api/tips`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
