@@ -28,6 +28,7 @@ router.post("/auth/login", async (req, res): Promise<void> => {
   }
 
   (req.session as any).staffId = staff.id;
+  (req.session as any).role = staff.role;
 
   const { passwordHash: _ph, ...safeStaff } = staff;
   res.json({
