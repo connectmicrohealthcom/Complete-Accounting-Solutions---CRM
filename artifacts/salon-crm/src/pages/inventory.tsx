@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Plus, Package as PackageIcon, AlertTriangle, Edit2, Trash2 } from "lucide-react";
+import { Search, Plus, Package as PackageIcon, AlertTriangle, Edit2, Trash2, Download } from "lucide-react";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription
 } from "@/components/ui/dialog";
@@ -42,6 +42,17 @@ type Product = {
   costPrice?: number;
   price: number;
 };
+
+function exportInventoryCSV(products: Product[]) {
+  const rows = [
+    ["ID", "Product", "Brand", "SKU", "Stock", "Low Stock Threshold", "Cost Price", "Selling Price"],
+    ...products.map(p => [p.id, p.name, p.brand ?? "", p.sku ?? "", p.stockQuantity, p.lowStockThreshold, Number(p.costPrice ?? 0).toFixed(2), Number(p.price).toFixed(2)])
+  ];
+  const csv = rows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob); const a = document.createElement("a");
+  a.href = url; a.download = `inventory-${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
+}
 
 export default function Inventory() {
   const [search, setSearch] = useState("");
@@ -126,10 +137,10 @@ export default function Inventory() {
             {products ? `${products.length} product${products.length !== 1 ? "s" : ""}` : "Manage retail products and professional stock."}
           </p>
         </div>
-        <Button className="shrink-0 gap-2" onClick={openAdd}>
+        <div className="flex gap-2 shrink-0"><Button variant="outline" className="gap-2" onClick={() => exportInventoryCSV(products ?? [])}><Download className="w-4 h-4" />CSV</Button><Button className="gap-2" onClick={openAdd}>
           <Plus className="w-4 h-4" />
           Add Product
-        </Button>
+        </Button></div>
       </div>
 
       <Card className="shadow-sm border-border">
