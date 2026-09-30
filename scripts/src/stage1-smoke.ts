@@ -191,7 +191,7 @@ async function main() {
     ["/staff", staff.id, "staff"],
   ] as Array<[string, number, string]>) {
     const cleanupResponse = await fetch(`${baseUrl}/api${path}/${id}`, { method: "DELETE", headers: { cookie } });
-    const expectedCleanupStatus = label === "membership plan" ? 200 : 204;
+    const expectedCleanupStatus = ["membership plan", "gift card type"].includes(label) ? 200 : 204;
     if (cleanupResponse.status !== expectedCleanupStatus) throw new Error(`${label} cleanup: expected ${expectedCleanupStatus}, got ${cleanupResponse.status}: ${await cleanupResponse.text()}`);
   }
 
