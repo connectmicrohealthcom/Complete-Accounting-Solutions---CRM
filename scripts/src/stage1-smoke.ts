@@ -161,6 +161,17 @@ async function main() {
     method: "POST", headers, body: JSON.stringify({ amount: 20, description: "Stage 1 gift card redemption", referenceType: "gift_card", referenceId: gift.id }),
   }), 200, "gift card wallet redemption");
 
+  const walletSale = await json(await expectStatus(fetch(`${baseUrl}/api/sales`, {
+    method: "POST", headers,
+    body: JSON.stringify({
+      clientId: client.id, staffId: staff.id, paymentMethod: "wallet", discount: 50,
+      items: [{ type: "service", referenceId: service.id, name: "ignored", quantity: 1, unitPrice: 1 }],
+    }),
+  }), 201, "wallet POS sale"));
+  if (Number(walletSale.total) !== 50) throw new Error("wallet POS sale total is incorrect");
+  const walletAfterSale = await json(await expectStatus(fetch(`${baseUrl}/api/clients/${client.id}/wallet`, { headers: { cookie } }), 200, "wallet after POS sale"));
+  if (Number(walletAfterSale.balance) !== 50) throw new Error("wallet POS payment did not deduct the client wallet");
+
   await expectStatus(fetch(`${baseUrl}/api/staff/${staff.id}/wage-settings`, {
     method: "PUT", headers, body: JSON.stringify({ wageType: "monthly", baseAmount: 1000 }),
   }), 200, "wage settings");
@@ -174,12 +185,12 @@ async function main() {
     method: "POST", headers, body: JSON.stringify({ amount: 200, periodFrom: nextDate(0), periodTo: nextDate(0), paymentDate: nextDate(0), paymentMethod: "cash" }),
   }), 201, "wage payment");
   const financial = await json(await expectStatus(fetch(`${baseUrl}/api/staff/${staff.id}/financial-summary?from=${nextDate(-1)}&to=${nextDate(1)}`, { headers: { cookie } }), 200, "financial summary"));
-  if (Number(financial.totalRevenue) !== 130 || Number(financial.commissionEarned) !== 13 || Number(financial.wagePaid) !== 200 || Number(financial.netPayable) !== 813) {
+  if (Number(financial.totalRevenue) !== 180 || Number(financial.commissionEarned) !== 18 || Number(financial.wagePaid) !== 200 || Number(financial.netPayable) !== 818) {
     throw new Error(`unexpected payroll calculation: ${JSON.stringify(financial)}`);
   }
 
   const salesSummary = await json(await expectStatus(fetch(`${baseUrl}/api/sales/summary?from=${nextDate(-1)}&to=${nextDate(1)}`, { headers: { cookie } }), 200, "sales summary"));
-  if (Number(salesSummary.totalRevenue) < 130) throw new Error("sales summary did not include the POS sale");
+  if (Number(salesSummary.totalRevenue) < 180) throw new Error("sales summary did not include the POS sale");
 
   for (const [path, id, label] of [
     ["/clients", client.id, "client"],
