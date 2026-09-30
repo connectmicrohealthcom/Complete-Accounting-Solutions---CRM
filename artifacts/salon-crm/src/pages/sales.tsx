@@ -187,6 +187,7 @@ export default function Sales() {
                 <SelectItem value="card">Card</SelectItem>
                 <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
                 <SelectItem value="loyalty_points">Loyalty Points</SelectItem>
+                    <SelectItem value="wallet">Wallet</SelectItem>
               </SelectContent>
             </Select>
           </div>
