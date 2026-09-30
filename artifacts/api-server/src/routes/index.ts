@@ -15,7 +15,7 @@ import dashboardRouter from "./dashboard";
 import tipsRouter from "./tips";
 import financeRouter from "./finance";
 import expensesRouter from "./expenses";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireRole } from "../middleware/auth";
 
 const router: IRouter = Router();
 
@@ -35,6 +35,7 @@ router.use(membershipsRouter);
 router.use(giftCardsRouter);
 router.use(dashboardRouter);
 router.use(tipsRouter);
+router.use(requireRole("admin", "manager"));
 router.use(financeRouter);
 router.use(expensesRouter);
 
