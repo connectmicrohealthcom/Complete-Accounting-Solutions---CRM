@@ -27,6 +27,7 @@ import Settings from "@/pages/settings";
 import FinancePaymentSummary from "@/pages/finance-payment-summary";
 import FinanceExpenses from "@/pages/finance-expenses";
 import FinanceReports from "@/pages/finance-reports";
+import Accounting from "@/pages/accounting";
 import PublicBooking from "@/pages/public-booking";
 
 const queryClient = new QueryClient({
@@ -104,6 +105,9 @@ function AppRouter() {
       </Route>
       <Route path="/finance/expenses">
         <ProtectedRoute><Layout><FinanceExpenses /></Layout></ProtectedRoute>
+      </Route>
+      <Route path="/accounting">
+        <ProtectedRoute><Layout><Accounting /></Layout></ProtectedRoute>
       </Route>
       <Route path="/finance/reports">
         <ProtectedRoute><Layout><FinanceReports /></Layout></ProtectedRoute>
