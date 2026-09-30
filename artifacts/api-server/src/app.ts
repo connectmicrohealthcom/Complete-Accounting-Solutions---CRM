@@ -40,7 +40,7 @@ app.use(cors({
 }));
 app.use(express.json({
   verify: (req, _res, buffer) => {
-    if (req.originalUrl.startsWith("/api/public/booking/payment/webhook")) {
+    if (String((req as any).url ?? "").startsWith("/api/public/booking/payment/webhook")) {
       (req as any).rawBody = Buffer.from(buffer);
     }
   },
