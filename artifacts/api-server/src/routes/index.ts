@@ -15,11 +15,14 @@ import dashboardRouter from "./dashboard";
 import tipsRouter from "./tips";
 import financeRouter from "./finance";
 import expensesRouter from "./expenses";
+import { requireAuth } from "../middleware/auth";
 
 const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+
+router.use(requireAuth);
 router.use(staffRouter);
 router.use(clientsRouter);
 router.use(clientGroupsRouter);
