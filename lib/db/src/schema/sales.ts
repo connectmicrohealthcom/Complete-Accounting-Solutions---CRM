@@ -6,7 +6,7 @@ import { clientsTable } from "./clients";
 import { appointmentsTable } from "./appointments";
 
 export const paymentMethodEnum = pgEnum("payment_method", [
-  "cash", "card", "bank_transfer", "loyalty_points"
+  "cash", "card", "bank_transfer", "loyalty_points", "wallet"
 ]);
 
 export const saleItemTypeEnum = pgEnum("sale_item_type", ["service", "product"]);
