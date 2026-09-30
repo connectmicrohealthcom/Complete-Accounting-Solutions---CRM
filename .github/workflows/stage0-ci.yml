@@ -42,5 +42,27 @@ jobs:
         run: pnpm run typecheck
       - name: Build API
         run: pnpm --filter @workspace/api-server build
+      - name: Start API for smoke test
+        run: |
+          PORT=5001 NODE_ENV=test SESSION_SECRET=stage0-ci-session pnpm --filter @workspace/api-server start > /tmp/cas-api.log 2>&1 &
+          echo $! > /tmp/cas-api.pid
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:5001/api/healthz >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/cas-api.log
+          exit 1
+      - name: API smoke test
+        env:
+          SMOKE_BASE_URL: http://127.0.0.1:5001
+          SMOKE_EMAIL: stage0-admin@completeaccounting.test
+          SMOKE_PASSWORD: stage0-ci-password
+          NODE_ENV: test
+          SESSION_SECRET: stage0-ci-session
+          PORT: 5001
+        run: pnpm --filter @workspace/scripts stage0-smoke
+      - name: Stop API
+        if: always()
+        run: if [ -f /tmp/cas-api.pid ]; then kill $(cat /tmp/cas-api.pid) || true; fi
       - name: Build frontend
         run: pnpm --filter @workspace/salon-crm build
