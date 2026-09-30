@@ -91,6 +91,12 @@ jobs:
           NOTIFICATION_MODE: mock
           BUSINESS_TIMEZONE_OFFSET_MINUTES: 240
         run: pnpm --filter @workspace/scripts stage2-smoke
+      - name: Stage 3 accounting smoke test
+        env:
+          SMOKE_BASE_URL: http://127.0.0.1:5001
+          SMOKE_EMAIL: stage0-admin@completeaccounting.test
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+        run: pnpm --filter @workspace/scripts stage3-smoke
       - name: Stop API
         if: always()
         run: if [ -f /tmp/cas-api.pid ]; then kill $(cat /tmp/cas-api.pid) || true; fi
