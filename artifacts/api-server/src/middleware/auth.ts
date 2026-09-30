@@ -10,3 +10,12 @@ export const requireAuth: RequestHandler = (req, res, next) => {
 
   next();
 };
+
+export const requireRole = (...roles: string[]): RequestHandler => (req, res, next) => {
+  const staff = (req.session as { staffId?: number; role?: string }).role;
+  if (!staff || !roles.includes(staff)) {
+    res.status(403).json({ error: "Insufficient permissions" });
+    return;
+  }
+  next();
+};

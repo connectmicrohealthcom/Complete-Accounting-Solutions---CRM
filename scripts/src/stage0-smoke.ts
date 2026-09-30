@@ -58,6 +58,40 @@ async function main() {
     throw new Error("auth/me returned unexpected user");
   }
 
+  const receptionistEmail = "stage0-receptionist@completeaccounting.test";
+  await pool.query(
+    `INSERT INTO staff (name, email, password_hash, role, is_active)
+     VALUES ('Stage 0 Receptionist', $1, $2, 'receptionist', true)
+     ON CONFLICT (email) DO UPDATE
+       SET password_hash = EXCLUDED.password_hash, role = 'receptionist', is_active = true`,
+    [receptionistEmail, passwordHash],
+  );
+
+  const receptionistLogin = await expectStatus(
+    fetch(`${baseUrl}/api/auth/login`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email: receptionistEmail, password }),
+    }),
+    200,
+    "receptionist login",
+  );
+  const receptionistCookieHeader = receptionistLogin.headers.get("set-cookie");
+  if (!receptionistCookieHeader) throw new Error("receptionist login did not return a session cookie");
+  const receptionistCookie = receptionistCookieHeader.split(";")[0];
+
+  await expectStatus(
+    fetch(`${baseUrl}/api/finance/payment-breakdown`, { headers: { cookie: receptionistCookie } }),
+    403,
+    "receptionist finance access",
+  );
+
+  await expectStatus(
+    fetch(`${baseUrl}/api/auth/logout`, { method: "POST", headers: { cookie: receptionistCookie } }),
+    200,
+    "receptionist logout",
+  );
+
   const autoGroups = await readJson(await expectStatus(
     fetch(`${baseUrl}/api/clients/groups/auto`, { headers: { cookie } }),
     200,
