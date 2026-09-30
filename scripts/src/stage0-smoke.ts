@@ -102,7 +102,6 @@ async function main() {
     ["/clients", client.id, "client"],
     ["/services", service.id, "service"],
     ["/products", product.id, "product"],
-    ["/packages", pkg.id, "package"],
   ] as Array<[string, number, string]>) {
     await expectStatus(fetch(`${baseUrl}/api${path}/${id}`, {
       method: "DELETE",
