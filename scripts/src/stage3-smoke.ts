@@ -2,7 +2,7 @@ const base=process.env.SMOKE_BASE_URL??"http://127.0.0.1:5001";
 let cookie="";
 async function request(path:string,options:RequestInit={}){const headers:any={"Content-Type":"application/json",...(options.headers??{})};if(cookie)headers.Cookie=cookie;const r=await fetch(base+path,{...options,headers});const set=r.headers.get("set-cookie");if(set)cookie=set.split(";")[0];const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(`${path} ${r.status}: ${JSON.stringify(d)}`);return d;}
 async function main(){
- const email=process.env.SMOKE_ADMIN_EMAIL, password=process.env.SMOKE_ADMIN_PASSWORD;
+ const email=process.env.SMOKE_EMAIL, password=process.env.SMOKE_PASSWORD;
  if(!email||!password)throw new Error("SMOKE_ADMIN_EMAIL and SMOKE_ADMIN_PASSWORD are required");
  await request("/api/auth/login",{method:"POST",body:JSON.stringify({email,password})});
  const accounts=await request("/api/accounting/accounts");
