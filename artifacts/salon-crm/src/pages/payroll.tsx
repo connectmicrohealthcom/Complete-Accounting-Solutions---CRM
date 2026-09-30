@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { BarChart2, Clock, DollarSign, TrendingUp, ChevronRight } from "lucide-react";
+import { BarChart2, Clock, DollarSign, TrendingUp, ChevronRight, Download, Printer } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -102,6 +102,16 @@ function StaffFinancialRow({ staff, from, to }: { staff: any; from: string; to: 
   );
 }
 
+function exportPayrollCSV(rows: any[]) {
+  const data = [
+    ["Staff Member", "Role", "Revenue", "Commission", "Base Wage", "Wage Paid", "Net Payable", "Hours"],
+    ...rows.map(r => [r.staff.name, r.staff.role, Number(r.summary?.totalRevenue ?? 0).toFixed(2), Number(r.summary?.commissionEarned ?? 0).toFixed(2), Number(r.wageSettings?.baseAmount ?? 0).toFixed(2), Number(r.summary?.wagePaid ?? 0).toFixed(2), Number(r.summary?.netPayable ?? 0).toFixed(2), Number(r.summary?.totalHoursLogged ?? 0).toFixed(2)])
+  ];
+  const csv = data.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" }); const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = `payroll-${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
+}
+
 export default function Payroll() {
   const [preset, setPreset] = useState(0);
   const { from, to } = MONTH_PRESETS[preset];
@@ -111,6 +121,7 @@ export default function Payroll() {
   });
 
   const activeStaff = staffList?.filter((s: any) => s.isActive && s.role !== "admin") ?? [];
+  const payrollRows = activeStaff.map((staff: any) => ({ staff, summary: undefined, wageSettings: undefined }));
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -121,16 +132,14 @@ export default function Payroll() {
             Staff wages, commissions, and net payable — all in one place.
           </p>
         </div>
-        <Select value={String(preset)} onValueChange={(v) => setPreset(Number(v))}>
-          <SelectTrigger className="w-44">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {MONTH_PRESETS.map((p, i) => (
-              <SelectItem key={i} value={String(i)}>{p.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => window.print()}><Printer className="w-3.5 h-3.5" />Print / PDF</Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => exportPayrollCSV(payrollRows)}><Download className="w-3.5 h-3.5" />CSV</Button>
+          <Select value={String(preset)} onValueChange={(v) => setPreset(Number(v))}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>{MONTH_PRESETS.map((p, i) => <SelectItem key={i} value={String(i)}>{p.label}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Summary KPIs */}
