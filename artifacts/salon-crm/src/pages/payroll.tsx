@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { BarChart2, Clock, DollarSign, TrendingUp, ChevronRight } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subMonths } from "date-fns";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+
 const ROLE_COLORS: Record<string, string> = {
   admin: "bg-purple-100 text-purple-700",
   manager: "bg-blue-100 text-blue-700",
@@ -28,12 +30,12 @@ function StaffFinancialRow({ staff, from, to }: { staff: any; from: string; to: 
   const { data: summary, isLoading } = useQuery({
     queryKey: ["payroll-summary", staff.id, from, to],
     queryFn: () =>
-      fetch(`/api/staff/${staff.id}/financial-summary?from=${from}&to=${to}`).then((r) => r.json()),
+      fetch(`${API_BASE_URL}/api/staff/${staff.id}/financial-summary?from=${from}&to=${to}`, { credentials: "include" }).then((r) => r.json()),
   });
 
   const { data: wageSettings } = useQuery({
     queryKey: ["wage-settings", staff.id],
-    queryFn: () => fetch(`/api/staff/${staff.id}/wage-settings`).then((r) => r.json()),
+    queryFn: () => fetch(`${API_BASE_URL}/api/staff/${staff.id}/wage-settings`, { credentials: "include" }).then((r) => r.json()),
   });
 
   if (isLoading) {
