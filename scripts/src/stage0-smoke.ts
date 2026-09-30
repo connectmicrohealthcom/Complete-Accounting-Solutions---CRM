@@ -29,7 +29,7 @@ async function main() {
      VALUES ('Stage 0 Admin', $1, $2, 'admin', true)
      ON CONFLICT (email) DO UPDATE
        SET password_hash = EXCLUDED.password_hash, role = 'admin', is_active = true`,
-    [email, passwordHash],
+    [receptionistEmail, passwordHash],
   );
 
   await expectStatus(fetch(`${baseUrl}/api/healthz`), 200, "health");
