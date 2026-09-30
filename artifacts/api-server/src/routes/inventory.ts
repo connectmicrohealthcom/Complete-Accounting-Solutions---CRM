@@ -42,6 +42,14 @@ router.get("/products", async (req, res): Promise<void> => {
   res.json(result);
 });
 
+router.get("/products/:id", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [product] = await db.select().from(productsTable).where(eq(productsTable.id, id));
+  if (!product) { res.status(404).json({ error: "Not found" }); return; }
+  res.json(formatProduct(product));
+});
+
 router.post("/products", async (req, res): Promise<void> => {
   const parsed = CreateProductBody.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
