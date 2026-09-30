@@ -267,7 +267,7 @@ router.get("/finance/reports/balance-sheet", async (req, res): Promise<void> => 
       ${to ? sql`AND created_at < (${to}::date + interval '1 day')` : sql``}
     `),
     db.execute(sql`SELECT sum(wallet_balance) as total FROM clients WHERE wallet_balance > 0`),
-    db.execute(sql`SELECT sum(balance) as total FROM gift_cards WHERE balance > 0`),
+    db.execute(sql`SELECT sum(remaining_balance) as total FROM gift_cards WHERE remaining_balance > 0`),
     db.execute(sql`
       SELECT sum(amount) as total FROM expenses
       ${to ? sql`WHERE date <= ${to}` : sql``}

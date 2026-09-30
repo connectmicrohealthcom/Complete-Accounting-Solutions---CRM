@@ -132,7 +132,7 @@ async function getAutoGroupMembers(groupId: string): Promise<typeof clientsTable
       const rows = await db.execute(
         sql`SELECT DISTINCT c.* FROM clients c
             JOIN gift_cards gc ON gc.client_id = c.id
-            WHERE gc.balance > 0
+            WHERE gc.remaining_balance > 0
             ORDER BY c.total_spent DESC`
       );
       return rows.rows as any[];

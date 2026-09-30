@@ -58,6 +58,57 @@ async function main() {
     throw new Error("auth/me returned unexpected user");
   }
 
+  const autoGroups = await readJson(await expectStatus(
+    fetch(`${baseUrl}/api/clients/groups/auto`, { headers: { cookie } }),
+    200,
+    "auto client groups",
+  ));
+  if (!Array.isArray(autoGroups) || autoGroups.length !== 12) {
+    throw new Error("expected 12 built-in client groups");
+  }
+
+  const customGroup = await readJson(await expectStatus(
+    fetch(`${baseUrl}/api/clients/groups/custom`, {
+      method: "POST",
+      headers: { "content-type": "application/json", cookie },
+      body: JSON.stringify({
+        name: "Stage 0 Smoke Group",
+        logic: "AND",
+        rules: [{ field: "total_spend", operator: "gt", value: 0 }],
+      }),
+    }),
+    201,
+    "custom client group create",
+  ));
+
+  await expectStatus(
+    fetch(`${baseUrl}/api/clients/groups/custom/${customGroup.id}/count`, { headers: { cookie } }),
+    200,
+    "custom client group count",
+  );
+
+  await expectStatus(
+    fetch(`${baseUrl}/api/clients/groups/custom/${customGroup.id}`, {
+      method: "DELETE",
+      headers: { cookie },
+    }),
+    204,
+    "custom client group delete",
+  );
+
+  for (const path of [
+    "/finance/payment-breakdown",
+    "/finance/reports/pnl",
+    "/finance/reports/trial-balance",
+    "/finance/reports/balance-sheet",
+  ]) {
+    await expectStatus(
+      fetch(`${baseUrl}/api${path}`, { headers: { cookie } }),
+      200,
+      `finance endpoint ${path}`,
+    );
+  }
+
   const client = await readJson(await expectStatus(
     fetch(`${baseUrl}/api/clients`, {
       method: "POST",
