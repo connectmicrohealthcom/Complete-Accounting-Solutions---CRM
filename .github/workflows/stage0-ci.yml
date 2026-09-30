@@ -7,6 +7,21 @@ on:
 jobs:
   build-and-typecheck:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cas_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cas_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cas_ci
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -21,6 +36,8 @@ jobs:
           cache: pnpm
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Database schema push
+        run: pnpm --filter @workspace/db push
       - name: Typecheck
         run: pnpm run typecheck
       - name: Build API
