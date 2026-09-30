@@ -55,7 +55,7 @@ jobs:
         run: pnpm --filter @workspace/api-server build
       - name: Start API for smoke test
         run: |
-          PORT=5001 NODE_ENV=test SESSION_SECRET=stage0-ci-session pnpm --filter @workspace/api-server start > /tmp/cas-api.log 2>&1 &
+          PORT=5001 NODE_ENV=test SESSION_SECRET=stage0-ci-session PAYMENT_GATEWAY_MODE=mock NOTIFICATION_MODE=mock BUSINESS_TIMEZONE_OFFSET_MINUTES=240 pnpm --filter @workspace/api-server start > /tmp/cas-api.log 2>&1 &
           echo $! > /tmp/cas-api.pid
           for i in {1..20}; do
             if curl -fsS http://127.0.0.1:5001/api/healthz >/dev/null; then exit 0; fi
