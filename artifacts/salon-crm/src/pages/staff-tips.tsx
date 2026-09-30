@@ -12,6 +12,8 @@ import { DollarSign, TrendingUp, Users, Download } from "lucide-react";
 import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 import { useListStaff, getListStaffQueryKey } from "@workspace/api-client-react";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+
 const PRESETS = [
   { label: "Today", from: () => format(new Date(), "yyyy-MM-dd"), to: () => format(new Date(), "yyyy-MM-dd") },
   { label: "Last 7 Days", from: () => format(subDays(new Date(), 6), "yyyy-MM-dd"), to: () => format(new Date(), "yyyy-MM-dd") },
@@ -24,14 +26,14 @@ function fetchTips(params: { from?: string; to?: string; staffId?: string }) {
   if (params.from) qs.set("from", params.from);
   if (params.to) qs.set("to", params.to);
   if (params.staffId) qs.set("staffId", params.staffId);
-  return fetch(`/api/tips?${qs}`).then((r) => r.json());
+  return fetch(`${API_BASE_URL}/api/tips?${qs}`, { credentials: "include" }).then((r) => r.json());
 }
 
 function fetchTipsSummary(params: { from?: string; to?: string }) {
   const qs = new URLSearchParams();
   if (params.from) qs.set("from", params.from);
   if (params.to) qs.set("to", params.to);
-  return fetch(`/api/tips/summary?${qs}`).then((r) => r.json());
+  return fetch(`${API_BASE_URL}/api/tips/summary?${qs}`, { credentials: "include" }).then((r) => r.json());
 }
 
 export default function StaffTips() {
