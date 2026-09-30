@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
-import { db, salesTable, saleItemsTable, staffTable, clientsTable, clientsTable as ct } from "@workspace/db";
+import { db, salesTable, saleItemsTable, staffTable, clientsTable, clientsTable as ct, servicesTable, productsTable, appointmentsTable } from "@workspace/db";
 import {
   CreateSaleBody,
   GetSaleParams,
@@ -67,41 +67,126 @@ router.post("/sales", async (req, res): Promise<void> => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.message }); return; }
 
   const { items, discount = 0, ...saleData } = parsed.data;
-  const subtotal = items.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
-  const total = Math.max(0, subtotal - discount);
+  if (items.length === 0) { res.status(400).json({ error: "At least one sale item is required" }); return; }
+  if (!Number.isFinite(discount) || discount < 0) { res.status(400).json({ error: "Discount cannot be negative" }); return; }
 
-  const [sale] = await db.insert(salesTable).values({
-    ...saleData,
-    subtotal: String(subtotal),
-    discount: String(discount),
-    total: String(total),
-  }).returning();
+  try {
+    const result = await db.transaction(async (tx) => {
+      const [staff] = await tx.select().from(staffTable).where(eq(staffTable.id, saleData.staffId));
+      if (!staff || !staff.isActive) throw new Error("STAFF_NOT_ACTIVE");
 
-  const saleItemRows = items.map((i) => ({
-    saleId: sale.id,
-    type: i.type,
-    referenceId: i.referenceId ?? null,
-    name: i.name,
-    quantity: i.quantity,
-    unitPrice: String(i.unitPrice),
-    totalPrice: String(i.unitPrice * i.quantity),
-  }));
+      if (saleData.clientId != null) {
+        const [client] = await tx.select().from(clientsTable).where(eq(clientsTable.id, saleData.clientId));
+        if (!client) throw new Error("CLIENT_NOT_FOUND");
+      }
 
-  await db.insert(saleItemsTable).values(saleItemRows);
+      if (saleData.appointmentId != null) {
+        const [appointment] = await tx.select().from(appointmentsTable).where(eq(appointmentsTable.id, saleData.appointmentId));
+        if (!appointment) throw new Error("APPOINTMENT_NOT_FOUND");
+        if (["cancelled", "no_show"].includes(appointment.status)) throw new Error("APPOINTMENT_CLOSED");
+        const [existingSale] = await tx.select({ id: salesTable.id }).from(salesTable).where(eq(salesTable.appointmentId, saleData.appointmentId)).limit(1);
+        if (existingSale) throw new Error("APPOINTMENT_ALREADY_SOLD");
+      }
 
-  // Update client stats
-  if (saleData.clientId) {
-    await db.execute(sql`
-      UPDATE clients SET
-        total_spent = total_spent + ${total},
-        visit_count = visit_count + 1,
-        last_visit = NOW(),
-        loyalty_points = loyalty_points + ${Math.floor(total)}
-      WHERE id = ${saleData.clientId}
-    `);
+      const authoritativeItems: Array<typeof items[number] & { unitPrice: number }> = [];
+      for (const item of items) {
+        if (!Number.isInteger(item.quantity) || item.quantity < 1) throw new Error("INVALID_QUANTITY");
+        if (item.referenceId == null) throw new Error("ITEM_REFERENCE_REQUIRED");
+
+        if (item.type === "service") {
+          const [service] = await tx.select().from(servicesTable).where(eq(servicesTable.id, item.referenceId));
+          if (!service || !service.isActive) throw new Error("SERVICE_NOT_AVAILABLE");
+          authoritativeItems.push({ ...item, name: service.name, unitPrice: Number(service.price) });
+        } else {
+          const [product] = await tx.select().from(productsTable).where(eq(productsTable.id, item.referenceId));
+          if (!product || !product.isActive) throw new Error("PRODUCT_NOT_AVAILABLE");
+          if (product.stockQuantity < item.quantity) throw new Error("INSUFFICIENT_STOCK");
+          authoritativeItems.push({ ...item, name: product.name, unitPrice: Number(product.price) });
+        }
+      }
+
+      const subtotal = authoritativeItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+      if (discount > subtotal) throw new Error("DISCOUNT_EXCEEDS_SUBTOTAL");
+      const total = Math.round((subtotal - discount) * 100) / 100;
+
+      if (saleData.paymentMethod === "loyalty_points") {
+        if (saleData.clientId == null) throw new Error("LOYALTY_CLIENT_REQUIRED");
+        if (!Number.isInteger(total)) throw new Error("LOYALTY_TOTAL_MUST_BE_WHOLE_POINTS");
+        const [client] = await tx.select().from(clientsTable).where(eq(clientsTable.id, saleData.clientId));
+        if (!client || client.loyaltyPoints < total) throw new Error("INSUFFICIENT_LOYALTY_POINTS");
+        await tx.update(clientsTable).set({ loyaltyPoints: client.loyaltyPoints - total }).where(eq(clientsTable.id, client.id));
+      }
+
+      for (const item of authoritativeItems.filter(i => i.type === "product")) {
+        const updated = await tx.update(productsTable)
+          .set({ stockQuantity: sql`${productsTable.stockQuantity} - ${item.quantity}` })
+          .where(and(eq(productsTable.id, item.referenceId!), gte(productsTable.stockQuantity, item.quantity)))
+          .returning({ id: productsTable.id });
+        if (!updated.length) throw new Error("INSUFFICIENT_STOCK");
+      }
+
+      const [sale] = await tx.insert(salesTable).values({
+        ...saleData,
+        subtotal: String(subtotal),
+        discount: String(discount),
+        total: String(total),
+      }).returning();
+
+      await tx.insert(saleItemsTable).values(authoritativeItems.map((item) => ({
+        saleId: sale.id,
+        type: item.type,
+        referenceId: item.referenceId ?? null,
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: String(item.unitPrice),
+        totalPrice: String(item.unitPrice * item.quantity),
+      })));
+
+      if (saleData.clientId) {
+        const [client] = await tx.select().from(clientsTable).where(eq(clientsTable.id, saleData.clientId));
+        if (client) {
+          const earnedPoints = saleData.paymentMethod === "loyalty_points" ? 0 : Math.floor(total);
+          await tx.update(clientsTable).set({
+            totalSpent: String(Number(client.totalSpent) + total),
+            visitCount: client.visitCount + 1,
+            lastVisit: new Date(),
+            loyaltyPoints: client.loyaltyPoints + earnedPoints,
+          }).where(eq(clientsTable.id, client.id));
+        }
+      }
+
+      if (saleData.appointmentId != null) {
+        await tx.update(appointmentsTable)
+          .set({ status: "completed" })
+          .where(eq(appointmentsTable.id, saleData.appointmentId));
+      }
+
+      return sale;
+    });
+
+    res.status(201).json(await buildSaleResponse(result));
+  } catch (error) {
+    const messages: Record<string, [number, string]> = {
+      STAFF_NOT_ACTIVE: [400, "Staff member is not active"],
+      CLIENT_NOT_FOUND: [404, "Client not found"],
+      APPOINTMENT_NOT_FOUND: [404, "Appointment not found"],
+      APPOINTMENT_CLOSED: [409, "Appointment cannot be sold because it is closed"],
+      APPOINTMENT_ALREADY_SOLD: [409, "Appointment already has a sale"],
+      INVALID_QUANTITY: [400, "Quantity must be a positive whole number"],
+      ITEM_REFERENCE_REQUIRED: [400, "Each service or product must reference a catalogue item"],
+      SERVICE_NOT_AVAILABLE: [400, "Service is not active or does not exist"],
+      PRODUCT_NOT_AVAILABLE: [400, "Product is not active or does not exist"],
+      INSUFFICIENT_STOCK: [409, "Insufficient product stock"],
+      DISCOUNT_EXCEEDS_SUBTOTAL: [400, "Discount cannot exceed the subtotal"],
+      LOYALTY_CLIENT_REQUIRED: [400, "A client is required for loyalty-point payment"],
+      LOYALTY_TOTAL_MUST_BE_WHOLE_POINTS: [400, "Loyalty-point payments must use a whole-number total"],
+      INSUFFICIENT_LOYALTY_POINTS: [409, "Insufficient loyalty points"],
+    };
+    const key = error instanceof Error ? error.message : "";
+    const mapped = messages[key];
+    if (mapped) { res.status(mapped[0]).json({ error: mapped[1] }); return; }
+    throw error;
   }
-
-  res.status(201).json(await buildSaleResponse(sale));
 });
 
 router.get("/sales/summary", async (req, res): Promise<void> => {
