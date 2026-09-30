@@ -12,3 +12,4 @@ export * from "./attendance-logs";
 export * from "./staff-financials";
 export * from "./expenses";
 export * from "./client-groups";
+export * from "./notifications";
