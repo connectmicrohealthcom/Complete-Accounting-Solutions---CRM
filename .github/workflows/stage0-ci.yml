@@ -81,6 +81,16 @@ jobs:
           SESSION_SECRET: stage1-ci-session
           PORT: 5001
         run: pnpm --filter @workspace/scripts stage1-smoke
+      - name: Stage 2 salon automation and online booking smoke test
+        env:
+          SMOKE_BASE_URL: http://127.0.0.1:5001
+          NODE_ENV: test
+          SESSION_SECRET: stage2-ci-session
+          PORT: 5001
+          PAYMENT_GATEWAY_MODE: mock
+          NOTIFICATION_MODE: mock
+          BUSINESS_TIMEZONE_OFFSET_MINUTES: 240
+        run: pnpm --filter @workspace/scripts stage2-smoke
       - name: Stop API
         if: always()
         run: if [ -f /tmp/cas-api.pid ]; then kill $(cat /tmp/cas-api.pid) || true; fi
