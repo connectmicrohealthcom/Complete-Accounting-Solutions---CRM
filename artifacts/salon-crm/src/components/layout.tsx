@@ -171,7 +171,7 @@ const FLAT_NAV = [
   { href: "/settings",          label: "Settings",         icon: Settings         },
 ];
 
-const STORAGE_KEY = "layal-sidebar-collapsed";
+const STORAGE_KEY = "complete-accounting-sidebar-collapsed";
 
 // ─── Secondary Panel ────────────────────────────────────────────────────────
 
@@ -332,7 +332,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Logo mark */}
       <div className="h-14 flex items-center justify-center border-b border-border flex-shrink-0">
         <div className="w-8 h-8 bg-primary rounded flex items-center justify-center">
-          <span className="text-primary-foreground font-serif font-bold text-lg leading-none">L</span>
+          <span className="text-primary-foreground font-serif font-bold text-lg leading-none">CAS</span>
         </div>
       </div>
 
@@ -424,10 +424,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
       {/* Logo + brand */}
       <div className="h-14 px-5 flex items-center gap-3 border-b border-border flex-shrink-0">
         <div className="w-7 h-7 bg-primary rounded flex items-center justify-center flex-shrink-0">
-          <span className="text-primary-foreground font-serif font-bold text-base leading-none">L</span>
+          <span className="text-primary-foreground font-serif font-bold text-base leading-none">CAS</span>
         </div>
         <h1 className="font-serif font-semibold text-base tracking-wide text-foreground truncate">
-          Layal Al Zahra
+          Complete Accounting Solutions
         </h1>
       </div>
 
@@ -521,9 +521,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </button>
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
-                <span className="text-primary-foreground font-serif font-bold text-sm leading-none">L</span>
+                <span className="text-primary-foreground font-serif font-bold text-sm leading-none">CAS</span>
               </div>
-              <span className="font-serif font-semibold text-sm text-foreground">Layal Al Zahra</span>
+              <span className="font-serif font-semibold text-sm text-foreground">Complete Accounting Solutions</span>
             </div>
           </div>
         )}
