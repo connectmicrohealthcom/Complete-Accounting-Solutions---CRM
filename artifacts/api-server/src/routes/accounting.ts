@@ -150,7 +150,7 @@ router.post("/accounting/periods", async(req,res)=>{
   if(!name||!/^\d{4}-\d{2}-\d{2}$/.test(startDate)||!/^\d{4}-\d{2}-\d{2}$/.test(endDate)||startDate>endDate){res.status(400).json({error:"Valid period dates are required"});return;}
   const [row]=await db.insert(accountingPeriodsTable).values({name,startDate,endDate}).returning();res.status(201).json(row);
 });
-router.get("/accounting/periods",async(_req,res)=>res.json(await db.select().from(accountingPeriodsTable).orderBy(desc(accountingPeriodsTable.startDate)));
+router.get("/accounting/periods",async(_req,res)=>res.json(await db.select().from(accountingPeriodsTable).orderBy(desc(accountingPeriodsTable.startDate))));
 router.post("/accounting/periods/:id/close",async(req,res)=>{
   const id=Number(req.params.id);
   const result=await db.transaction(async tx=>{
