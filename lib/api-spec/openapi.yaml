@@ -1,0 +1,2593 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Layal Al Zahra Salon CRM API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication
+  - name: staff
+    description: Staff management
+  - name: clients
+    description: Client management
+  - name: services
+    description: Service catalog
+  - name: appointments
+    description: Appointment scheduling
+  - name: sales
+    description: Sales & transactions
+  - name: inventory
+    description: Inventory & products
+  - name: loyalty
+    description: Loyalty & packages
+  - name: dashboard
+    description: Dashboard & analytics
+  - name: memberships
+    description: Membership plans & client memberships
+  - name: gift-cards
+    description: Gift cards & client wallet
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # AUTH
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email/password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffMember"
+        "401":
+          description: Not authenticated
+
+  # STAFF
+  /staff:
+    get:
+      operationId: listStaff
+      tags: [staff]
+      summary: List all staff members
+      responses:
+        "200":
+          description: Staff list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/StaffMember"
+    post:
+      operationId: createStaff
+      tags: [staff]
+      summary: Create a new staff member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffMember"
+
+  /staff/{id}:
+    get:
+      operationId: getStaff
+      tags: [staff]
+      summary: Get staff member by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Staff member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffMember"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateStaff
+      tags: [staff]
+      summary: Update a staff member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StaffUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffMember"
+    delete:
+      operationId: deleteStaff
+      tags: [staff]
+      summary: Delete a staff member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /staff/{id}/schedule:
+    get:
+      operationId: getStaffSchedule
+      tags: [staff]
+      summary: Get working hours for a staff member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Schedule
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkingHours"
+    put:
+      operationId: updateStaffSchedule
+      tags: [staff]
+      summary: Update working hours for a staff member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WorkingHoursUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/WorkingHours"
+
+  /staff/{id}/performance:
+    get:
+      operationId: fetchStaffPerformance
+      tags: [staff]
+      summary: Get staff performance & sales stats
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Performance stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StaffPerformance"
+
+  # CLIENTS
+  /clients:
+    get:
+      operationId: listClients
+      tags: [clients]
+      summary: List all clients
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientList"
+    post:
+      operationId: createClient
+      tags: [clients]
+      summary: Create a new client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+
+  /clients/{id}:
+    get:
+      operationId: getClient
+      tags: [clients]
+      summary: Get client by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateClient
+      tags: [clients]
+      summary: Update a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ClientUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+    delete:
+      operationId: deleteClient
+      tags: [clients]
+      summary: Delete a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /clients/{id}/history:
+    get:
+      operationId: getClientHistory
+      tags: [clients]
+      summary: Get appointment & purchase history for a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientHistory"
+
+  # SERVICES
+  /services:
+    get:
+      operationId: listServices
+      tags: [services]
+      summary: List all services
+      parameters:
+        - name: categoryId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Services list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Service"
+    post:
+      operationId: createService
+      tags: [services]
+      summary: Create a new service
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+
+  /services/{id}:
+    patch:
+      operationId: updateService
+      tags: [services]
+      summary: Update a service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Service"
+    delete:
+      operationId: deleteService
+      tags: [services]
+      summary: Delete a service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /service-categories:
+    get:
+      operationId: listServiceCategories
+      tags: [services]
+      summary: List service categories
+      responses:
+        "200":
+          description: Categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ServiceCategory"
+    post:
+      operationId: createServiceCategory
+      tags: [services]
+      summary: Create a service category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ServiceCategoryInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceCategory"
+
+  # APPOINTMENTS
+  /appointments/summary:
+    get:
+      operationId: getAppointmentSummary
+      tags: [appointments]
+      summary: Get appointment summary analytics for a date range
+      parameters:
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Appointment summary analytics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppointmentSummary"
+
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [appointments]
+      summary: List appointments
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+        - name: staffId
+          in: query
+          schema:
+            type: integer
+        - name: clientId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: serviceId
+          in: query
+          schema:
+            type: integer
+        - name: paymentMethod
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+    post:
+      operationId: createAppointment
+      tags: [appointments]
+      summary: Create an appointment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  /appointments/{id}:
+    get:
+      operationId: getAppointment
+      tags: [appointments]
+      summary: Get appointment by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Appointment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+    patch:
+      operationId: updateAppointment
+      tags: [appointments]
+      summary: Update an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+    delete:
+      operationId: deleteAppointment
+      tags: [appointments]
+      summary: Delete/cancel an appointment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /appointments/{id}/status:
+    patch:
+      operationId: updateAppointmentStatus
+      tags: [appointments]
+      summary: Update appointment status (confirm, complete, no-show, cancel)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentStatusUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  # SALES
+  /sales:
+    get:
+      operationId: listSales
+      tags: [sales]
+      summary: List sales/transactions
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+        - name: staffId
+          in: query
+          schema:
+            type: integer
+        - name: clientId
+          in: query
+          schema:
+            type: integer
+        - name: paymentMethod
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sales list
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SaleList"
+    post:
+      operationId: createSale
+      tags: [sales]
+      summary: Create a sale/checkout
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaleInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+
+  /sales/{id}:
+    get:
+      operationId: getSale
+      tags: [sales]
+      summary: Get sale by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Sale
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sale"
+
+  /sales/summary:
+    get:
+      operationId: getSalesSummary
+      tags: [sales]
+      summary: Get sales summary stats for a period
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+        - name: to
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesSummary"
+
+  # INVENTORY
+  /products:
+    get:
+      operationId: listProducts
+      tags: [inventory]
+      summary: List all products
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: lowStock
+          in: query
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: Products
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Product"
+    post:
+      operationId: createProduct
+      tags: [inventory]
+      summary: Create a product
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  /products/{id}:
+    patch:
+      operationId: updateProduct
+      tags: [inventory]
+      summary: Update a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProductUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+    delete:
+      operationId: deleteProduct
+      tags: [inventory]
+      summary: Delete a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /products/{id}/stock:
+    patch:
+      operationId: adjustStock
+      tags: [inventory]
+      summary: Adjust stock level for a product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockAdjustment"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Product"
+
+  # LOYALTY
+  /packages:
+    get:
+      operationId: listPackages
+      tags: [loyalty]
+      summary: List membership packages
+      responses:
+        "200":
+          description: Packages
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Package"
+    post:
+      operationId: createPackage
+      tags: [loyalty]
+      summary: Create a membership package
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Package"
+
+  /packages/{id}:
+    patch:
+      operationId: updatePackage
+      tags: [loyalty]
+      summary: Update a package
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PackageUpdate"
+      responses:
+        "200":
+          description: Updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Package"
+
+  /clients/{id}/loyalty:
+    get:
+      operationId: getClientLoyalty
+      tags: [loyalty]
+      summary: Get loyalty points and active packages for a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Loyalty info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientLoyalty"
+
+  /clients/{id}/loyalty/redeem:
+    post:
+      operationId: redeemPoints
+      tags: [loyalty]
+      summary: Redeem loyalty points for a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PointsRedemption"
+      responses:
+        "200":
+          description: Redeemed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientLoyalty"
+
+  # DASHBOARD
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get today's dashboard summary
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/revenue-chart:
+    get:
+      operationId: getRevenueChart
+      tags: [dashboard]
+      summary: Get revenue chart data
+      parameters:
+        - name: period
+          in: query
+          schema:
+            type: string
+            enum: [week, month, year]
+      responses:
+        "200":
+          description: Chart data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ChartPoint"
+
+  /dashboard/top-services:
+    get:
+      operationId: getTopServices
+      tags: [dashboard]
+      summary: Get top services by revenue
+      responses:
+        "200":
+          description: Top services
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/TopService"
+
+  /dashboard/upcoming-appointments:
+    get:
+      operationId: getUpcomingAppointments
+      tags: [dashboard]
+      summary: Get today's upcoming appointments
+      responses:
+        "200":
+          description: Upcoming appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+
+  # MEMBERSHIPS
+  /membership-plans:
+    get:
+      operationId: listMembershipPlans
+      tags: [memberships]
+      summary: List all membership plans
+      responses:
+        "200":
+          description: List of plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MembershipPlan"
+    post:
+      operationId: createMembershipPlan
+      tags: [memberships]
+      summary: Create a membership plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMembershipPlanInput"
+      responses:
+        "201":
+          description: Created plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MembershipPlan"
+
+  /membership-plans/{id}:
+    patch:
+      operationId: updateMembershipPlan
+      tags: [memberships]
+      summary: Update a membership plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMembershipPlanInput"
+      responses:
+        "200":
+          description: Updated plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MembershipPlan"
+    delete:
+      operationId: deleteMembershipPlan
+      tags: [memberships]
+      summary: Delete a membership plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+
+  /client-memberships:
+    post:
+      operationId: assignMembership
+      tags: [memberships]
+      summary: Assign membership to a client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignMembershipInput"
+      responses:
+        "201":
+          description: Assigned membership
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientMembership"
+
+  /client-memberships/{id}/use:
+    post:
+      operationId: recordMembershipUsage
+      tags: [memberships]
+      summary: Record membership service usage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecordMembershipUsageInput"
+      responses:
+        "200":
+          description: Usage recorded
+
+  /clients/{id}/memberships:
+    get:
+      operationId: getClientMemberships
+      tags: [memberships]
+      summary: Get memberships for a client
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client memberships
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ClientMembershipDetail"
+
+  /memberships/sales:
+    get:
+      operationId: getMembershipSales
+      tags: [memberships]
+      summary: Membership sales report
+      responses:
+        "200":
+          description: Sales list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MembershipSaleRow"
+
+  # GIFT CARDS
+  /gift-card-types:
+    get:
+      operationId: listGiftCardTypes
+      tags: [gift-cards]
+      summary: List all gift card types
+      responses:
+        "200":
+          description: Gift card types
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GiftCardType"
+    post:
+      operationId: createGiftCardType
+      tags: [gift-cards]
+      summary: Create a gift card type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGiftCardTypeInput"
+      responses:
+        "201":
+          description: Created type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GiftCardType"
+
+  /gift-card-types/{id}:
+    patch:
+      operationId: updateGiftCardType
+      tags: [gift-cards]
+      summary: Update a gift card type
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateGiftCardTypeInput"
+      responses:
+        "200":
+          description: Updated type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GiftCardType"
+    delete:
+      operationId: deleteGiftCardType
+      tags: [gift-cards]
+      summary: Delete a gift card type
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Deleted
+
+  /gift-cards:
+    post:
+      operationId: sellGiftCard
+      tags: [gift-cards]
+      summary: Sell a gift card to a client
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SellGiftCardInput"
+      responses:
+        "201":
+          description: Gift card sold
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GiftCardSale"
+    get:
+      operationId: listGiftCards
+      tags: [gift-cards]
+      summary: List all gift cards sold
+      responses:
+        "200":
+          description: Gift card list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/GiftCardSale"
+
+  /gift-cards/liability:
+    get:
+      operationId: getGiftCardLiability
+      tags: [gift-cards]
+      summary: Gift card liability report
+      responses:
+        "200":
+          description: Liability summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GiftCardLiability"
+
+  /clients/{id}/wallet:
+    get:
+      operationId: getClientWallet
+      tags: [gift-cards]
+      summary: Get client wallet balance and transactions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Wallet info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientWallet"
+
+  /clients/{id}/wallet/redeem:
+    post:
+      operationId: redeemWallet
+      tags: [gift-cards]
+      summary: Deduct from client wallet
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/WalletRedeemInput"
+      responses:
+        "200":
+          description: Balance updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  clientId:
+                    type: integer
+                  balance:
+                    type: number
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+
+    # Auth
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+
+    AuthResponse:
+      type: object
+      required: [user]
+      properties:
+        user:
+          $ref: "#/components/schemas/StaffMember"
+
+    # Staff
+    StaffMember:
+      type: object
+      required: [id, name, email, role, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: ["string", "null"]
+        role:
+          type: string
+          enum: [admin, manager, receptionist, stylist, therapist]
+        specialization:
+          type: ["string", "null"]
+        color:
+          type: ["string", "null"]
+        commissionRate:
+          type: ["number", "null"]
+        targetMonthly:
+          type: ["number", "null"]
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+
+    StaffInput:
+      type: object
+      required: [name, email, password, role]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [admin, manager, receptionist, stylist, therapist]
+        specialization:
+          type: string
+        color:
+          type: string
+        commissionRate:
+          type: number
+        targetMonthly:
+          type: number
+
+    StaffUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        role:
+          type: string
+          enum: [admin, manager, receptionist, stylist, therapist]
+        specialization:
+          type: string
+        color:
+          type: string
+        commissionRate:
+          type: number
+        targetMonthly:
+          type: number
+        isActive:
+          type: boolean
+
+    WorkingHours:
+      type: object
+      required: [id, staffId, dayOfWeek, startTime, endTime, isWorking]
+      properties:
+        id:
+          type: integer
+        staffId:
+          type: integer
+        dayOfWeek:
+          type: integer
+          description: "0=Sunday, 1=Monday, ..., 6=Saturday"
+        startTime:
+          type: string
+        endTime:
+          type: string
+        isWorking:
+          type: boolean
+
+    WorkingHoursUpdate:
+      type: object
+      required: [hours]
+      properties:
+        hours:
+          type: array
+          items:
+            type: object
+            required: [dayOfWeek, startTime, endTime, isWorking]
+            properties:
+              dayOfWeek:
+                type: integer
+              startTime:
+                type: string
+              endTime:
+                type: string
+              isWorking:
+                type: boolean
+
+    StaffPerformance:
+      type: object
+      required: [staffId, totalRevenue, totalAppointments, completedAppointments, commissionEarned, targetProgress]
+      properties:
+        staffId:
+          type: integer
+        totalRevenue:
+          type: number
+        totalAppointments:
+          type: integer
+        completedAppointments:
+          type: integer
+        commissionEarned:
+          type: number
+        targetProgress:
+          type: number
+        topServices:
+          type: array
+          items:
+            $ref: "#/components/schemas/TopService"
+
+    # Clients
+    Client:
+      type: object
+      required: [id, name, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: ["string", "null"]
+        phone:
+          type: ["string", "null"]
+        dateOfBirth:
+          type: ["string", "null"]
+        gender:
+          type: ["string", "null"]
+        notes:
+          type: ["string", "null"]
+        loyaltyPoints:
+          type: integer
+        totalSpent:
+          type: number
+        visitCount:
+          type: integer
+        lastVisit:
+          type: ["string", "null"]
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+
+    ClientInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        dateOfBirth:
+          type: string
+        gender:
+          type: string
+        notes:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    ClientUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        dateOfBirth:
+          type: string
+        gender:
+          type: string
+        notes:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+
+    ClientList:
+      type: object
+      required: [clients, total, page, limit]
+      properties:
+        clients:
+          type: array
+          items:
+            $ref: "#/components/schemas/Client"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    ClientHistory:
+      type: object
+      required: [appointments, sales]
+      properties:
+        appointments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appointment"
+        sales:
+          type: array
+          items:
+            $ref: "#/components/schemas/Sale"
+
+    # Services
+    ServiceCategory:
+      type: object
+      required: [id, name]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        color:
+          type: ["string", "null"]
+
+    ServiceCategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        color:
+          type: string
+
+    Service:
+      type: object
+      required: [id, name, duration, price, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        categoryId:
+          type: ["integer", "null"]
+        categoryName:
+          type: ["string", "null"]
+        duration:
+          type: integer
+          description: Duration in minutes
+        price:
+          type: number
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+
+    ServiceInput:
+      type: object
+      required: [name, duration, price]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: integer
+        duration:
+          type: integer
+        price:
+          type: number
+
+    ServiceUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        categoryId:
+          type: integer
+        duration:
+          type: integer
+        price:
+          type: number
+        isActive:
+          type: boolean
+
+    # Appointments
+    Appointment:
+      type: object
+      required: [id, clientId, clientName, staffId, staffName, serviceId, serviceName, date, startTime, endTime, status, totalPrice, createdAt]
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        clientName:
+          type: string
+        clientPhone:
+          type: ["string", "null"]
+        staffId:
+          type: integer
+        staffName:
+          type: string
+        serviceId:
+          type: integer
+        serviceName:
+          type: string
+        serviceCategoryName:
+          type: ["string", "null"]
+        serviceDuration:
+          type: integer
+        date:
+          type: string
+        startTime:
+          type: string
+        endTime:
+          type: string
+        status:
+          type: string
+          enum: [pending, confirmed, in_progress, completed, cancelled, no_show]
+        totalPrice:
+          type: number
+        notes:
+          type: ["string", "null"]
+        staffColor:
+          type: ["string", "null"]
+        paymentMethod:
+          type: ["string", "null"]
+        saleId:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+
+    AppointmentSummary:
+      type: object
+      required: [totals, byStatus, byDayHour, byStaff, byCategory, topServicesByCount, topServicesByRevenue, topStaffByCompleted]
+      properties:
+        totals:
+          type: object
+          required: [total, completed, cancelled, noShow, pending, confirmed, inProgress, totalRevenue, avgRevenue, newClients, returningClients]
+          properties:
+            total:
+              type: integer
+            completed:
+              type: integer
+            cancelled:
+              type: integer
+            noShow:
+              type: integer
+            pending:
+              type: integer
+            confirmed:
+              type: integer
+            inProgress:
+              type: integer
+            totalRevenue:
+              type: number
+            avgRevenue:
+              type: number
+            newClients:
+              type: integer
+            returningClients:
+              type: integer
+        byStatus:
+          type: array
+          items:
+            type: object
+            required: [status, count]
+            properties:
+              status:
+                type: string
+              count:
+                type: integer
+        byDayHour:
+          type: array
+          items:
+            type: object
+            required: [dayOfWeek, hour, count]
+            properties:
+              dayOfWeek:
+                type: integer
+              hour:
+                type: integer
+              count:
+                type: integer
+        byStaff:
+          type: array
+          items:
+            type: object
+            required: [staffId, staffName, count, completed, revenue]
+            properties:
+              staffId:
+                type: integer
+              staffName:
+                type: string
+              count:
+                type: integer
+              completed:
+                type: integer
+              revenue:
+                type: number
+        byCategory:
+          type: array
+          items:
+            type: object
+            required: [categoryName, count]
+            properties:
+              categoryName:
+                type: string
+              count:
+                type: integer
+        topServicesByCount:
+          type: array
+          items:
+            type: object
+            required: [serviceId, serviceName, count, revenue]
+            properties:
+              serviceId:
+                type: integer
+              serviceName:
+                type: string
+              count:
+                type: integer
+              revenue:
+                type: number
+        topServicesByRevenue:
+          type: array
+          items:
+            type: object
+            required: [serviceId, serviceName, count, revenue]
+            properties:
+              serviceId:
+                type: integer
+              serviceName:
+                type: string
+              count:
+                type: integer
+              revenue:
+                type: number
+        topStaffByCompleted:
+          type: array
+          items:
+            type: object
+            required: [staffId, staffName, completed, revenue]
+            properties:
+              staffId:
+                type: integer
+              staffName:
+                type: string
+              completed:
+                type: integer
+              revenue:
+                type: number
+
+    AppointmentInput:
+      type: object
+      required: [clientId, staffId, serviceId, date, startTime]
+      properties:
+        clientId:
+          type: integer
+        staffId:
+          type: integer
+        serviceId:
+          type: integer
+        date:
+          type: string
+        startTime:
+          type: string
+        notes:
+          type: string
+
+    AppointmentUpdate:
+      type: object
+      properties:
+        clientId:
+          type: integer
+        staffId:
+          type: integer
+        serviceId:
+          type: integer
+        date:
+          type: string
+        startTime:
+          type: string
+        notes:
+          type: string
+
+    AppointmentStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [pending, confirmed, in_progress, completed, cancelled, no_show]
+
+    # Sales
+    SaleItem:
+      type: object
+      required: [id, type, name, quantity, unitPrice, totalPrice]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+          enum: [service, product]
+        referenceId:
+          type: ["integer", "null"]
+        name:
+          type: string
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+        totalPrice:
+          type: number
+
+    Sale:
+      type: object
+      required: [id, clientId, clientName, staffId, staffName, items, subtotal, discount, total, paymentMethod, createdAt]
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: ["integer", "null"]
+        clientName:
+          type: ["string", "null"]
+        staffId:
+          type: integer
+        staffName:
+          type: string
+        appointmentId:
+          type: ["integer", "null"]
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaleItem"
+        subtotal:
+          type: number
+        discount:
+          type: number
+        total:
+          type: number
+        paymentMethod:
+          type: string
+          enum: [cash, card, bank_transfer, loyalty_points]
+        notes:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+
+    SaleInputItem:
+      type: object
+      required: [type, name, quantity, unitPrice]
+      properties:
+        type:
+          type: string
+          enum: [service, product]
+        referenceId:
+          type: integer
+        name:
+          type: string
+        quantity:
+          type: integer
+        unitPrice:
+          type: number
+
+    SaleInput:
+      type: object
+      required: [staffId, items, paymentMethod]
+      properties:
+        clientId:
+          type: integer
+        staffId:
+          type: integer
+        appointmentId:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SaleInputItem"
+        discount:
+          type: number
+        paymentMethod:
+          type: string
+          enum: [cash, card, bank_transfer, loyalty_points]
+        notes:
+          type: string
+
+    SaleList:
+      type: object
+      required: [sales, total, page, limit]
+      properties:
+        sales:
+          type: array
+          items:
+            $ref: "#/components/schemas/Sale"
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer
+
+    SalesSummary:
+      type: object
+      required: [totalRevenue, totalTransactions, avgTransactionValue, byPaymentMethod]
+      properties:
+        totalRevenue:
+          type: number
+        totalTransactions:
+          type: integer
+        avgTransactionValue:
+          type: number
+        byPaymentMethod:
+          type: array
+          items:
+            type: object
+            required: [method, total, count]
+            properties:
+              method:
+                type: string
+              total:
+                type: number
+              count:
+                type: integer
+
+    # Inventory
+    Product:
+      type: object
+      required: [id, name, stockQuantity, lowStockThreshold, price, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        brand:
+          type: ["string", "null"]
+        sku:
+          type: ["string", "null"]
+        stockQuantity:
+          type: integer
+        lowStockThreshold:
+          type: integer
+        costPrice:
+          type: ["number", "null"]
+        price:
+          type: number
+        isLowStock:
+          type: boolean
+        createdAt:
+          type: string
+
+    ProductInput:
+      type: object
+      required: [name, price]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        brand:
+          type: string
+        sku:
+          type: string
+        stockQuantity:
+          type: integer
+        lowStockThreshold:
+          type: integer
+        costPrice:
+          type: number
+        price:
+          type: number
+
+    ProductUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        brand:
+          type: string
+        sku:
+          type: string
+        lowStockThreshold:
+          type: integer
+        costPrice:
+          type: number
+        price:
+          type: number
+
+    StockAdjustment:
+      type: object
+      required: [adjustment, reason]
+      properties:
+        adjustment:
+          type: integer
+          description: Positive to add stock, negative to remove
+        reason:
+          type: string
+
+    # Loyalty
+    Package:
+      type: object
+      required: [id, name, price, validityDays, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: ["string", "null"]
+        price:
+          type: number
+        validityDays:
+          type: integer
+        services:
+          type: array
+          items:
+            type: object
+            required: [serviceId, serviceName, quantity]
+            properties:
+              serviceId:
+                type: integer
+              serviceName:
+                type: string
+              quantity:
+                type: integer
+        loyaltyPointsBonus:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+
+    PackageInput:
+      type: object
+      required: [name, price, validityDays]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        validityDays:
+          type: integer
+        services:
+          type: array
+          items:
+            type: object
+            required: [serviceId, quantity]
+            properties:
+              serviceId:
+                type: integer
+              quantity:
+                type: integer
+        loyaltyPointsBonus:
+          type: integer
+
+    PackageUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        validityDays:
+          type: integer
+        loyaltyPointsBonus:
+          type: integer
+        isActive:
+          type: boolean
+
+    ClientLoyalty:
+      type: object
+      required: [clientId, points, activePackages]
+      properties:
+        clientId:
+          type: integer
+        points:
+          type: integer
+        activePackages:
+          type: array
+          items:
+            type: object
+            required: [packageId, packageName, expiryDate, remainingServices]
+            properties:
+              packageId:
+                type: integer
+              packageName:
+                type: string
+              expiryDate:
+                type: string
+              remainingServices:
+                type: array
+                items:
+                  type: object
+                  required: [serviceId, serviceName, remaining]
+                  properties:
+                    serviceId:
+                      type: integer
+                    serviceName:
+                      type: string
+                    remaining:
+                      type: integer
+
+    PointsRedemption:
+      type: object
+      required: [points]
+      properties:
+        points:
+          type: integer
+
+    # Dashboard
+    DashboardSummary:
+      type: object
+      required: [todayRevenue, todayAppointments, newClients, totalClients, pendingAppointments, lowStockCount]
+      properties:
+        todayRevenue:
+          type: number
+        todayAppointments:
+          type: integer
+        completedToday:
+          type: integer
+        newClients:
+          type: integer
+        totalClients:
+          type: integer
+        pendingAppointments:
+          type: integer
+        lowStockCount:
+          type: integer
+        monthRevenue:
+          type: number
+        monthAppointments:
+          type: integer
+
+    ChartPoint:
+      type: object
+      required: [label, revenue, appointments]
+      properties:
+        label:
+          type: string
+        revenue:
+          type: number
+        appointments:
+          type: integer
+
+    TopService:
+      type: object
+      required: [serviceId, serviceName, count, revenue]
+      properties:
+        serviceId:
+          type: integer
+        serviceName:
+          type: string
+        count:
+          type: integer
+        revenue:
+          type: number
+
+    RecordMembershipUsageInput:
+      type: object
+      required: [serviceId]
+      properties:
+        serviceId:
+          type: integer
+        notes:
+          type: string
+
+    # Memberships
+    MembershipPlanService:
+      type: object
+      required: [serviceId, serviceName, quantity]
+      properties:
+        serviceId:
+          type: integer
+        serviceName:
+          type: string
+        quantity:
+          type: integer
+
+    MembershipPlan:
+      type: object
+      required: [id, name, price, validityDays, loyaltyPointsBonus, isActive, createdAt, services]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        validityDays:
+          type: integer
+        loyaltyPointsBonus:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/MembershipPlanService"
+
+    CreateMembershipPlanInput:
+      type: object
+      required: [name, price]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        price:
+          type: number
+        validityDays:
+          type: integer
+        loyaltyPointsBonus:
+          type: integer
+        isActive:
+          type: boolean
+        services:
+          type: array
+          items:
+            type: object
+            required: [serviceId, quantity]
+            properties:
+              serviceId:
+                type: integer
+              quantity:
+                type: integer
+
+    AssignMembershipInput:
+      type: object
+      required: [clientId, planId, startDate]
+      properties:
+        clientId:
+          type: integer
+        planId:
+          type: integer
+        startDate:
+          type: string
+        paymentMethod:
+          type: string
+
+    ClientMembership:
+      type: object
+      required: [id, clientId, planId, startDate, expiryDate, amountPaid, paymentMethod, status, purchasedAt]
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        planId:
+          type: integer
+        planName:
+          type: string
+        clientName:
+          type: string
+        startDate:
+          type: string
+        expiryDate:
+          type: string
+        amountPaid:
+          type: number
+        paymentMethod:
+          type: string
+        status:
+          type: string
+        purchasedAt:
+          type: string
+
+    ClientMembershipServiceBalance:
+      type: object
+      required: [serviceId, serviceName, total, used, remaining]
+      properties:
+        serviceId:
+          type: integer
+        serviceName:
+          type: string
+        total:
+          type: integer
+        used:
+          type: integer
+        remaining:
+          type: integer
+
+    ClientMembershipDetail:
+      type: object
+      required: [id, planId, planName, startDate, expiryDate, amountPaid, paymentMethod, status, purchasedAt, services]
+      properties:
+        id:
+          type: integer
+        planId:
+          type: integer
+        planName:
+          type: string
+        startDate:
+          type: string
+        expiryDate:
+          type: string
+        amountPaid:
+          type: number
+        paymentMethod:
+          type: string
+        status:
+          type: string
+        purchasedAt:
+          type: string
+        services:
+          type: array
+          items:
+            $ref: "#/components/schemas/ClientMembershipServiceBalance"
+
+    MembershipSaleRow:
+      type: object
+      required: [id, clientId, clientName, planId, planName, amountPaid, paymentMethod, startDate, expiryDate, status, purchasedAt]
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        clientName:
+          type: string
+        planId:
+          type: integer
+        planName:
+          type: string
+        amountPaid:
+          type: number
+        paymentMethod:
+          type: string
+        startDate:
+          type: string
+        expiryDate:
+          type: string
+        status:
+          type: string
+        purchasedAt:
+          type: string
+
+    # Gift Cards
+    GiftCardType:
+      type: object
+      required: [id, name, purchaseAmount, creditAmount, isActive, createdAt]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        purchaseAmount:
+          type: number
+        creditAmount:
+          type: number
+        validityDays:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+
+    CreateGiftCardTypeInput:
+      type: object
+      required: [name, purchaseAmount, creditAmount]
+      properties:
+        name:
+          type: string
+        purchaseAmount:
+          type: number
+        creditAmount:
+          type: number
+        validityDays:
+          type: integer
+        isActive:
+          type: boolean
+
+    SellGiftCardInput:
+      type: object
+      required: [clientId, typeId]
+      properties:
+        clientId:
+          type: integer
+        typeId:
+          type: integer
+        paymentMethod:
+          type: string
+
+    GiftCardSale:
+      type: object
+      required: [id, clientId, clientName, typeId, typeName, referenceCode, purchaseAmount, creditAmount, remainingBalance, paymentMethod, status, purchasedAt]
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        clientName:
+          type: string
+        typeId:
+          type: integer
+        typeName:
+          type: string
+        referenceCode:
+          type: string
+        purchaseAmount:
+          type: number
+        creditAmount:
+          type: number
+        remainingBalance:
+          type: number
+        paymentMethod:
+          type: string
+        expiryDate:
+          type: string
+        status:
+          type: string
+        purchasedAt:
+          type: string
+
+    GiftCardLiabilityBreakdown:
+      type: object
+      required: [typeName, count, liability]
+      properties:
+        typeName:
+          type: string
+        count:
+          type: integer
+        liability:
+          type: number
+
+    GiftCardLiability:
+      type: object
+      required: [totalLiability, totalActiveWallets, breakdown]
+      properties:
+        totalLiability:
+          type: number
+        totalActiveWallets:
+          type: integer
+        breakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/GiftCardLiabilityBreakdown"
+
+    WalletTransaction:
+      type: object
+      required: [id, type, amount, balanceAfter, description, createdAt]
+      properties:
+        id:
+          type: integer
+        type:
+          type: string
+        amount:
+          type: number
+        balanceAfter:
+          type: number
+        description:
+          type: string
+        referenceType:
+          type: string
+        referenceId:
+          type: integer
+        createdAt:
+          type: string
+
+    ClientWallet:
+      type: object
+      required: [clientId, balance, transactions]
+      properties:
+        clientId:
+          type: integer
+        balance:
+          type: number
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/WalletTransaction"
+
+    WalletRedeemInput:
+      type: object
+      required: [amount, description]
+      properties:
+        amount:
+          type: number
+        description:
+          type: string
+        referenceType:
+          type: string
+        referenceId:
+          type: integer

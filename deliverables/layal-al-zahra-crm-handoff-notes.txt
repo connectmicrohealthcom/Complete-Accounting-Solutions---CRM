@@ -1,0 +1,118 @@
+LAYAL AL ZAHRA SALON CRM
+PROJECT HANDOFF AND RECOVERY NOTES
+Generated: 2026-09-30
+
+PURPOSE
+This note supplements the complete workspace snapshot and BRD. It records setup
+and recovery information that is useful when restoring the project in a new
+Replit workspace. It intentionally contains no secret values, database
+credentials, passwords, or live customer/staff records.
+
+WHICH ARCHIVE TO USE
+Use layal-al-zahra-crm-complete-workspace.zip for the full snapshot. It contains
+the project source, workspace configuration, Git repository/history, dependencies,
+cache material, uploaded reference files, and existing documentation.
+
+The six files named layal-al-zahra-crm-complete-workspace.part-01 through
+part-06 are binary chunks of that same ZIP, not separate project archives. Join
+them in numeric order to recreate the ZIP. The separate parts guide has the
+commands and checksums.
+
+DATABASE
+- Engine/ORM: PostgreSQL with Drizzle ORM.
+- Schema source of truth: lib/db/src/schema/.
+- Database connection: the application reads DATABASE_URL. In a Replit-managed
+  setup, provision the database in the new workspace and let Replit provide this
+  runtime variable. Do not copy a connection string into this note or commit it.
+- Schema setup for a fresh DEVELOPMENT database:
+    pnpm install
+    pnpm --filter @workspace/db run push
+- Check the target database before applying schema changes. The command above is
+  intended for development setup; it does not copy the old database's records.
+
+Declared schema tables (28):
+Core and scheduling:
+  staff, working_hours, clients, client_groups, service_categories, services,
+  appointments
+Sales and operations:
+  sales, sale_items, products, expense_categories, expenses
+Loyalty and stored value:
+  packages, package_services, client_packages, client_package_usage,
+  membership_plans, membership_plan_services, client_memberships,
+  client_membership_usage, gift_card_types, gift_cards, wallet_transactions
+Staff finance and attendance:
+  tips, attendance_logs, staff_wage_settings, wage_payments, commission_slabs
+
+Important schema distinctions:
+- working_hours represents the weekly availability used for booking.
+- attendance_logs represents actual daily clock-in/clock-out records.
+- Drizzle numeric/decimal fields are represented as strings in TypeScript;
+  convert numbers to strings when inserting and convert back when calculating
+  or displaying numeric values.
+- Valid staff-role values are admin, manager, receptionist, stylist, therapist.
+
+The workspace snapshot contains schema/code, not the current database contents.
+Customer, staff, appointment, sales, and other live rows must be transferred
+separately through an authorized database export/import if they are needed.
+Review any seed script before running it against a database that already has data.
+
+SECRETS AND ENVIRONMENT
+- SESSION_SECRET: required by the API session middleware. Create a fresh,
+  strong value in the new workspace's Replit Secrets. Do not reuse or paste the
+  old value into this file, chat, source control, or a handoff archive.
+- DATABASE_URL: supplied by the provisioned Replit PostgreSQL database in a
+  managed setup. It is not included here and should not be manually copied.
+- PORT, NODE_ENV, and Replit runtime variables are provided/configured by the
+  runtime as appropriate. LOG_LEVEL is optional and defaults in the API code.
+- The API currently has a development fallback if SESSION_SECRET is unset.
+  Do not rely on that fallback; configure a fresh secret before using the app.
+
+For an external database, configure its connection through the new workspace's
+secret/environment-variable flow. Never put a live connection string in this
+text file.
+
+Git history:
+- The complete Git history available at snapshot time is preserved in the
+  archive's .git directory. It is not reduced to this note or a short log.
+- After extracting, inspect history with:
+    git log --oneline --all --decorate
+    git branch --all
+    git tag --list
+- Git LFS objects present in the snapshot are included with the repository.
+- Before sharing the restored repository, review historical commits and assets
+  for demo credentials or other sensitive content. Rotate/remove any such values.
+
+RESTORING AND RUNNING
+1. Extract the complete ZIP into a new workspace.
+2. From the project root, run:
+     pnpm install
+3. Provision the new workspace's PostgreSQL database and add a fresh
+   SESSION_SECRET in Replit Secrets.
+4. Apply the Drizzle schema to the new development database:
+     pnpm --filter @workspace/db run push
+5. Start the frontend and API using the configured Replit workflows, or run:
+     pnpm --filter @workspace/api-server run dev
+     pnpm --filter @workspace/salon-crm run dev
+
+The installed node_modules and caches are included for completeness, but
+reinstalling from pnpm-lock.yaml is recommended when restoring on a different
+workspace or machine.
+
+VERIFICATION AND KNOWN LIMITATION
+The frontend typecheck passed during the earlier handoff work. The API
+typecheck reported six numeric-type errors in services, inventory, and loyalty
+code. Re-run checks after restore and address these before treating the project
+as production-ready.
+
+BRD
+The BRD is included in deliverables as DOCX, Markdown, and TXT. It summarizes
+implemented modules, recent Client Groups and Finance work, requirements,
+limitations, acceptance criteria, and prioritized remaining work. It is a
+handoff guide, not a replacement for the source, Git history, database backup,
+or secret setup.
+
+ARCHIVE SAFETY EXCLUSIONS
+For safety, the snapshot excludes the cached Replit environment at
+.cache/replit/env, .env files, private-key files, and files whose names indicate
+credentials or secrets. Replit-managed secret values and live database records
+are not part of the archive.
