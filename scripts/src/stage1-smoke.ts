@@ -190,7 +190,9 @@ async function main() {
     ["/gift-card-types", giftType.id, "gift card type"],
     ["/staff", staff.id, "staff"],
   ] as Array<[string, number, string]>) {
-    await expectStatus(fetch(`${baseUrl}/api${path}/${id}`, { method: "DELETE", headers: { cookie } }), 204, `${label} cleanup`);
+    const cleanupResponse = await fetch(`${baseUrl}/api${path}/${id}`, { method: "DELETE", headers: { cookie } });
+    const expectedCleanupStatus = label === "membership plan" ? 200 : 204;
+    if (cleanupResponse.status !== expectedCleanupStatus) throw new Error(`${label} cleanup: expected ${expectedCleanupStatus}, got ${cleanupResponse.status}: ${await cleanupResponse.text()}`);
   }
 
   await expectStatus(fetch(`${baseUrl}/api/auth/logout`, { method: "POST", headers: { cookie } }), 200, "logout");
