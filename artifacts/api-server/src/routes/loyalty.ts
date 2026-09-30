@@ -65,6 +65,15 @@ router.post("/packages", async (req, res): Promise<void> => {
   res.status(201).json(await buildPackageResponse(pkg));
 });
 
+router.delete("/packages/:id", async (req, res): Promise<void> => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) { res.status(400).json({ error: "Invalid id" }); return; }
+  const [pkg] = await db.select({ id: packagesTable.id }).from(packagesTable).where(eq(packagesTable.id, id));
+  if (!pkg) { res.status(404).json({ error: "Not found" }); return; }
+  await db.delete(packagesTable).where(eq(packagesTable.id, id));
+  res.sendStatus(204);
+});
+
 router.patch("/packages/:id", async (req, res): Promise<void> => {
   const params = UpdatePackageParams.safeParse(req.params);
   if (!params.success) { res.status(400).json({ error: "Invalid id" }); return; }
