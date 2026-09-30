@@ -15,8 +15,10 @@ import { useToast } from "@/hooks/use-toast";
 import { ChevronLeft, Plus, Download, DollarSign, Clock, TrendingUp, CreditCard } from "lucide-react";
 import { format, startOfMonth, endOfMonth, subDays } from "date-fns";
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "";
+
 const api = (path: string, opts?: RequestInit) =>
-  fetch(`/api${path}`, { headers: { "Content-Type": "application/json" }, ...opts });
+  fetch(`${API_BASE_URL}/api${path}`, { credentials: "include", headers: { "Content-Type": "application/json" }, ...opts });
 
 function useStaffFinancials(staffId: number, from: string, to: string) {
   const wageSettings = useQuery({
