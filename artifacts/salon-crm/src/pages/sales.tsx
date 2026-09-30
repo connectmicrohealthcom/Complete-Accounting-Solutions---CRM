@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Receipt, Trash2 } from "lucide-react";
+import { Plus, Receipt, Trash2, Download } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 
@@ -47,6 +47,18 @@ const METHOD_LABELS: Record<string, string> = {
   bank_transfer: "Bank Transfer",
   loyalty_points: "Loyalty Points",
 };
+
+function exportSalesCSV(sales: any[]) {
+  const rows = [
+    ["ID", "Date", "Client", "Staff", "Payment Method", "Subtotal", "Discount", "Total"],
+    ...sales.map(s => [s.id, s.createdAt, s.clientName || "Walk-in", s.staffName, s.paymentMethod, Number(s.subtotal).toFixed(2), Number(s.discount).toFixed(2), Number(s.total).toFixed(2)])
+  ];
+  const csv = rows.map(row => row.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = `sales-${format(new Date(), "yyyy-MM-dd")}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
 
 export default function Sales() {
   const [paymentMethod, setPaymentMethod] = useState<string>("");
@@ -165,7 +177,7 @@ export default function Sales() {
 
       <Card className="shadow-sm border-border">
         <CardHeader className="pb-4 flex-row items-center justify-between">
-          <CardTitle className="text-lg">Recent Transactions</CardTitle>
+          <div className="flex items-center gap-2"><CardTitle className="text-lg">Recent Transactions</CardTitle><Button variant="outline" size="sm" className="gap-1" onClick={() => exportSalesCSV(data?.sales ?? [])}><Download className="w-3.5 h-3.5" />CSV</Button></div>
           <div className="w-[180px]">
             <Select value={paymentMethod} onValueChange={setPaymentMethod}>
               <SelectTrigger className="h-9"><SelectValue placeholder="Payment Method" /></SelectTrigger>
