@@ -55,12 +55,12 @@ async function main() {
 
   // ─── SERVICE CATEGORIES ───────────────────────────────────────────────────
   const categories = [
-    { name: "Hair Treatments", color: "#E91E63", order: 1 },
-    { name: "Gel Nails", color: "#9C27B0", order: 2 },
-    { name: "Gelish", color: "#673AB7", order: 3 },
-    { name: "Tinting & Threading", color: "#FF5722", order: 4 },
-    { name: "Massage Services", color: "#4CAF50", order: 5 },
-    { name: "Hair Removal", color: "#FF9800", order: 6 },
+    { name: "Hair Treatments", color: "#E91E63" },
+    { name: "Gel Nails", color: "#9C27B0" },
+    { name: "Gelish", color: "#673AB7" },
+    { name: "Tinting & Threading", color: "#FF5722" },
+    { name: "Massage Services", color: "#4CAF50" },
+    { name: "Hair Removal", color: "#FF9800" },
   ];
 
   const catMap: Record<string, number> = {};
@@ -71,7 +71,7 @@ async function main() {
       console.log(`  ⏭  Category exists: ${cat.name}`);
       continue;
     }
-    const [inserted] = await db.insert(schema.serviceCategoriesTable).values({ name: cat.name, color: cat.color, sortOrder: cat.order }).returning();
+    const [inserted] = await db.insert(schema.serviceCategoriesTable).values({ name: cat.name, color: cat.color }).returning();
     catMap[cat.name] = inserted.id;
     console.log(`  ✅ Category: ${cat.name}`);
   }
