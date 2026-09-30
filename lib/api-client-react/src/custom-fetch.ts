@@ -9,33 +9,41 @@ export type BodyType<T> = T;
 export type AuthTokenGetter = () => Promise<string | null> | string | null;
 
 const NO_BODY_STATUS = new Set([204, 205, 304]);
-const DEFAULT_JSON_ACCEPT = "application/json, application/problem+json";
+const DEFAULT_JSON_ACCEPT = "application/json";
 
 // ---------------------------------------------------------------------------
 // Module-level configuration
 // ---------------------------------------------------------------------------
 
-let _baseUrl: string | null = null;
+type RuntimeEnv = {
+  VITE_API_BASE_URL?: string;
+};
+
+const runtimeEnv = (import.meta as ImportMeta & { env?: RuntimeEnv }).env;
+
+let _baseUrl: string | null = runtimeEnv?.VITE_API_BASE_URL
+  ? runtimeEnv.VITE_API_BASE_URL.replace(/\/+$/, "")
+  : null;
 let _authTokenGetter: AuthTokenGetter | null = null;
 
 /**
  * Set a base URL that is prepended to every relative request URL
- * (i.e. paths that start with `/`).
+ * (i.e. paths that start with /).
  *
  * Useful for Expo bundles that need to call a remote API server.
- * Pass `null` to clear the base URL.
+ * Pass null to clear the base URL.
  */
 export function setBaseUrl(url: string | null): void {
   _baseUrl = url ? url.replace(/\/+$/, "") : null;
 }
 
 /**
- * Register a getter that supplies a bearer auth token.  Before every fetch
+ * Register a getter that supplies a bearer auth token. Before every fetch
  * the getter is invoked; when it returns a non-null string, an
- * `Authorization: Bearer <token>` header is attached to the request.
+ * Authorization: Bearer <token> header is attached to the request.
  *
  * Useful for Expo bundles making token-gated API calls.
- * Pass `null` to clear the getter.
+ * Pass null to clear the getter.
  *
  * NOTE: This function should never be used in web applications where session
  * token cookies are automatically associated with API calls by the browser.
@@ -55,7 +63,7 @@ function resolveMethod(input: RequestInfo | URL, explicitMethod?: string): strin
 }
 
 // Use loose check for URL — some runtimes (e.g. React Native) polyfill URL
-// differently, so `instanceof URL` can fail.
+// differently, so instanceof URL can fail.
 function isUrl(input: RequestInfo | URL): input is URL {
   return typeof URL !== "undefined" && input instanceof URL;
 }
@@ -111,12 +119,10 @@ function isTextMediaType(mediaType: string | null): boolean {
   );
 }
 
-// Use strict equality: in browsers, `response.body` is `null` when the
-// response genuinely has no content.  In React Native, `response.body` is
-// always `undefined` because the ReadableStream API is not implemented —
-// even when the response carries a full payload readable via `.text()` or
-// `.json()`.  Loose equality (`== null`) matches both `null` and `undefined`,
-// which causes every React Native response to be treated as empty.
+// Use strict equality: in browsers, response.body is null when the
+// response genuinely has no content. In React Native, response.body is
+// always undefined because the ReadableStream API is not implemented —
+// even when the response carries a full payload readable via .text() or .json().
 function hasNoBody(response: Response, method: string): boolean {
   if (method === "HEAD") return true;
   if (NO_BODY_STATUS.has(response.status)) return true;
@@ -360,7 +366,12 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { ...init, method, headers });
+  const response = await fetch(input, {
+    ...init,
+    method,
+    headers,
+    credentials: init.credentials ?? "include",
+  });
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
