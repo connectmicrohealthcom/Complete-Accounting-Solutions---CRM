@@ -34,12 +34,12 @@ type ProductForm = {
 type Product = {
   id: number;
   name: string;
-  description?: string;
-  brand?: string;
-  sku?: string;
+  description?: string | null;
+  brand?: string | null;
+  sku?: string | null;
   stockQuantity: number;
   lowStockThreshold: number;
-  costPrice?: number;
+  costPrice?: number | null;
   price: number;
 };
 
