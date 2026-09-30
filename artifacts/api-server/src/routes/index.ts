@@ -6,6 +6,7 @@ import clientsRouter from "./clients";
 import clientGroupsRouter from "./client-groups";
 import servicesRouter from "./services";
 import appointmentsRouter from "./appointments";
+import publicBookingRouter from "./public-booking";
 import salesRouter from "./sales";
 import inventoryRouter from "./inventory";
 import loyaltyRouter from "./loyalty";
@@ -21,6 +22,7 @@ const router: IRouter = Router();
 
 router.use(healthRouter);
 router.use(authRouter);
+router.use(publicBookingRouter);
 
 router.use(requireAuth);
 router.use(staffRouter);
