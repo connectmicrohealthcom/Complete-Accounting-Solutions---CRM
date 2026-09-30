@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { eq, desc, sql, and } from "drizzle-orm";
-import { db, expensesTable, expenseCategoriesTable } from "@workspace/db";
+import { db, expensesTable, expenseCategoriesTable, journalEntriesTable } from "@workspace/db";
+import { postExpenseTx } from "../services/accounting";
 
 const router: IRouter = Router();
 
@@ -84,16 +85,22 @@ router.get("/expenses", async (req, res): Promise<void> => {
 router.post("/expenses", async (req, res): Promise<void> => {
   const { categoryId, date, amount, description, paymentMethod, receiptRef, addedBy } = req.body;
   if (!date || !amount) { res.status(400).json({ error: "date and amount required" }); return; }
-  const [expense] = await db.insert(expensesTable).values({
-    categoryId: categoryId ? parseInt(categoryId) : null,
-    date, amount: String(amount), description, paymentMethod: paymentMethod ?? "cash",
-    receiptRef, addedBy,
-  }).returning();
+  const expense = await db.transaction(async tx => {
+    const [row] = await tx.insert(expensesTable).values({
+      categoryId: categoryId ? parseInt(categoryId) : null,
+      date, amount: String(amount), description, paymentMethod: paymentMethod ?? "cash",
+      receiptRef, addedBy,
+    }).returning();
+    await postExpenseTx(tx, row.id, (req as any).session?.staffId);
+    return row;
+  });
   res.status(201).json({ ...expense, amount: Number(expense.amount) });
 });
 
 router.put("/expenses/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
+  const [posted] = await db.select({ id: journalEntriesTable.id }).from(journalEntriesTable).where(and(eq(journalEntriesTable.referenceType, "expense"), eq(journalEntriesTable.referenceId, id), eq(journalEntriesTable.status, "posted"))).limit(1);
+  if (posted) { res.status(409).json({ error: "Posted expense cannot be edited. Reverse its accounting entry and create an adjustment." }); return; }
   const { categoryId, date, amount, description, paymentMethod, receiptRef, addedBy } = req.body;
   const [expense] = await db.update(expensesTable).set({
     categoryId: categoryId ? parseInt(categoryId) : null,
@@ -105,6 +112,8 @@ router.put("/expenses/:id", async (req, res): Promise<void> => {
 
 router.delete("/expenses/:id", async (req, res): Promise<void> => {
   const id = parseInt(req.params.id);
+  const [posted] = await db.select({ id: journalEntriesTable.id }).from(journalEntriesTable).where(and(eq(journalEntriesTable.referenceType, "expense"), eq(journalEntriesTable.referenceId, id), eq(journalEntriesTable.status, "posted"))).limit(1);
+  if (posted) { res.status(409).json({ error: "Posted expense cannot be deleted. Reverse its accounting entry and create an adjustment." }); return; }
   await db.delete(expensesTable).where(eq(expensesTable.id, id));
   res.sendStatus(204);
 });
