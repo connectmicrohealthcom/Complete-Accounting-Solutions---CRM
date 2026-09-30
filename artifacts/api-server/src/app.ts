@@ -9,6 +9,11 @@ const app: Express = express();
 
 app.set("trust proxy", 1);
 
+const sessionSecret = process.env.SESSION_SECRET;
+if (!sessionSecret && process.env.NODE_ENV === "production") {
+  throw new Error("SESSION_SECRET must be set in production.");
+}
+
 app.use(
   pinoHttp({
     logger,
@@ -38,7 +43,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use(
   session({
-    secret: process.env.SESSION_SECRET ?? "layal-salon-secret",
+    secret: sessionSecret ?? "development-only-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
