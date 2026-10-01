@@ -133,6 +133,15 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    id: "accounting",
+    label: "Accounting",
+    icon: Banknote,
+    matchPaths: ["/accounting"],
+    sub: [
+      { href: "/accounting", label: "Accounting", icon: Banknote },
+    ],
+  },
+  {
     id: "reports",
     label: "Reports",
     icon: BarChart2,
@@ -168,6 +177,7 @@ const FLAT_NAV = [
   { href: "/finance/payments",  label: "Payments",         icon: CreditCard       },
   { href: "/finance/expenses",  label: "Expenses",         icon: ReceiptText      },
   { href: "/finance/reports",   label: "Fin. Reports",     icon: PieChart         },
+  { href: "/accounting",         label: "Accounting",       icon: Banknote          },
   { href: "/settings",          label: "Settings",         icon: Settings         },
 ];
 
